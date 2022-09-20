@@ -357,6 +357,7 @@ contract Game {
             );
 
             if (initialBoards[otherPlayerIdx].isHit(cellToFire)) {
+                // TODO change to getFleet() == 0
                 attacks[currentPlayerIdx].markAsHit(cellToFire);
 
                 if (
