@@ -1,73 +1,87 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
 /**
- * Attacks are represented similar to board
- * 8x8=64 cells, 4 bits per cell. 256 bit per total. So to be used with uint256
- * But value are not contiguos. First 64 bits indicate whether each cell is untouched
- * next 64 bits indicate wheter the hit at a cell was a miss
- * next 64 indicate a hit
- * next 64 a destroy
+ * Attacks are represented using 192 bits. Bit layout:
+ * [64 bits: whether a cell in untouched | 64 bits: whether a cell is a miss | 64 bits: whether a cell is a hit]
+ * Each 64-bit piece has a layout like this:
+ * [bit for 63rd cell | bit for 62nd cell | bit for 0th cell]
  */
 library Attacks {
-    uint256 internal constant EMPTY_ATTACKS = 0xFFFFFFFFFFFFFFFF << 192;
+    // initializer for new battle
+    uint192 internal constant EMPTY_ATTACKS = 0xFFFFFFFFFFFFFFFF << 128;
 
-    // TODO add things like how many cells left, isThereAPendingHit, etc other helpers that can be used by generals
+    uint8 internal constant EMPTY = 0;
+    uint8 internal constant MISS = 1;
+    uint8 internal constant HIT = 2;
 
-    function isUntouched(uint256 attacks, uint8 cell)
-        internal
-        pure
-        returns (bool)
-    {
-        // shift 64*3=192 bits to the right (leftmost bits indicate whether a miss1)
-        // get the value at the cell by ANDing with 0x1<<cell. ((attacks >> 64) & (0x1 << cell)) which is equivalent to (attacks >> (64 + cell)) & 0x1 (not quite because now the value is at the very right)
-        return ((attacks >> (192 + cell)) & 0x1) == 1;
+    function isOfType(
+        uint192 attacks,
+        uint8 attackType,
+        uint8 cell
+    ) internal pure returns (bool) {
+        uint8 shiftBy = (64 * (2 - attackType)) + cell;
+        return ((attacks >> shiftBy) & 0x1) == 1;
     }
 
-    // TODO is is possible to update attacks var in place instead of returning a new val? if so update the Game contract as well
-    function markAsMiss(uint256 attacks, uint8 cell)
-        internal
-        pure
-        returns (uint256 updatedAttacks)
-    {
-        return markIthQuarter(attacks, cell, 1);
-    }
-
-    function markAsHit(uint256 attacks, uint8 cell)
-        internal
-        pure
-        returns (uint256 updatedAttacks)
-    {
-        return markIthQuarter(attacks, cell, 2);
-    }
-
-    function markAsDestroyed(uint256 attacks, uint8 cell)
-        internal
-        pure
-        returns (uint256 updatedAttacks)
-    {
-        return markIthQuarter(attacks, cell, 3);
-    }
-
-    function markIthQuarter(
-        uint256 attacks,
-        uint8 cell,
-        uint8 index
-    ) private pure returns (uint256) {
-        uint256 oneMask = 0x1 << cell;
-        uint256 zeroMask = ~oneMask;
-        uint256 updatedAttacks;
-        for (uint8 i = 0; i < 4; i++) {
-            uint8 shiftQuarterBy = 64 * (3 - i);
-            uint256 quarter = (attacks >> shiftQuarterBy) & 0xFFFFFFFFFFFFFFFF;
-            if (i == index) {
-                quarter |= oneMask;
+    function markAs(
+        uint192 attacks,
+        uint8 attackType,
+        uint8 cell
+    ) internal pure returns (uint192 updatedAttacks) {
+        uint64 oneMask = uint64(0x1 << cell);
+        uint64 zeroMask = ~oneMask;
+        for (uint8 i = 0; i < 3; i++) {
+            uint8 shiftChunkBy = 64 * (2 - i);
+            uint64 chunk = uint64(attacks >> shiftChunkBy);
+            if (i == attackType) {
+                chunk |= oneMask;
             } else {
-                quarter &= zeroMask;
+                chunk &= zeroMask;
             }
-            updatedAttacks |= (quarter << shiftQuarterBy);
+            updatedAttacks |= (uint192(chunk) << shiftChunkBy);
         }
+    }
 
-        return updatedAttacks;
+    function numberOfEmptyCells(uint192 attacks) internal pure returns (uint8) {
+        return hammingDistance64(uint64(attacks >> 128));
+    }
+
+    function numberOfMisses(uint192 attacks) internal pure returns (uint8) {
+        return hammingDistance64(uint64(attacks >> 64));
+    }
+
+    function numberOfHits(uint192 attacks) internal pure returns (uint8) {
+        return hammingDistance64(uint64(attacks));
+    }
+
+    function hasWon(uint192 attacks) internal pure returns (bool) {
+        return numberOfHits(attacks) == 21; // 21 is total number of cells occupied by ships
+    }
+
+    function hammingDistance64(uint64 v)
+        private
+        pure
+        returns (uint8 countOfOnes)
+    {
+        // TODO implement this for uint64
+        return
+            uint8(
+                hammingDistance32(uint32(v)) +
+                    hammingDistance32(uint32(v >> 32))
+            );
+    }
+
+    function hammingDistance32(uint32 v)
+        private
+        pure
+        returns (uint32 countOfOnes)
+    {
+        // See http://graphics.stanford.edu/~seander/bithacks.html (Counting bits set, in parallel section)
+        // Also see https://stackoverflow.com/questions/14555607/number-of-bits-set-in-a-number
+        // and https://stackoverflow.com/questions/15233121/calculating-hamming-weight-in-o1
+        v = v - ((v >> 1) & 0x55555555);
+        v = (v & 0x33333333) + ((v >> 2) & 0x33333333);
+        return (((v + (v >> 4)) & 0xF0F0F0F) * 0x1010101) >> 24;
     }
 }
