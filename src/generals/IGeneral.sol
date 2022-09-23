@@ -14,7 +14,7 @@ interface IGeneral {
     // check Fleet library for the layout of bits of fleet. Non-discovered fleet will have both,
     // the start and end coords =0
     function fire(
-        uint192 myBoard,
+        uint256 myBoard,
         uint192 myAttacks,
         uint192 opponentsAttacks,
         uint256 myLastMove,

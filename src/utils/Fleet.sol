@@ -79,7 +79,7 @@ library Fleet {
     function validateFleetAndConvertToBoard(uint64 fleet)
         internal
         pure
-        returns (uint192)
+        returns (uint256)
     {
         // make sure that the fleet is properly formatted: ships have the right size and
         // orientation (either horizontal or vertical)

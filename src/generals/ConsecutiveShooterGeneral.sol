@@ -18,7 +18,7 @@ contract ConsecutiveShooterGeneral is IGeneral {
     }
 
     function fire(
-        uint192, /* myBoard */
+        uint256, /* myBoard */
         uint192, /* myAttacks */
         uint192, /* opponentsAttacks */
         uint256 myLastMove,

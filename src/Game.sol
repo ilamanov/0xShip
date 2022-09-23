@@ -231,7 +231,7 @@ contract Game {
     // fleet is represented using 64 bits. See Fleet library for the layout of bits
     using Fleet for uint64;
     // board is represented using 192 bits. See Board library for the layout of bits
-    using Board for uint192;
+    using Board for uint256;
 
     struct FleetAndBoard {
         uint64 fleet;
@@ -283,10 +283,10 @@ contract Game {
         // this function not only makes sure that the revealed fleet actually corresponds to the
         // provided fleetHash earlier, but also makes sure that fleet obeys the rules of the game,
         // i.e. correct number of ships, correct placement, etc.
-        uint192 board = fleet.validateFleetAndConvertToBoard();
+        uint256 board = fleet.validateFleetAndConvertToBoard();
 
         // also store the board representation of the fleet for faster lookup
-        fleetsAndBoards[fleetHash] = FleetAndBoard(fleet, board);
+        fleetsAndBoards[fleetHash] = FleetAndBoard(fleet, uint192(board));
 
         emit FleetRevealed(fleetHash, fleet, salt);
     }
@@ -307,7 +307,7 @@ contract Game {
         // TODO is it possible to shave off gas due to them being constant?
         IGeneral[2] generals;
         uint64[2] fleets;
-        uint192[2] boards;
+        uint256[2] boards;
         // everything else is not constant
         uint192[2] attacks;
         uint256[2] lastMoves;
@@ -382,8 +382,8 @@ contract Game {
                 continue;
             }
 
-            uint8 hitShipType = gs.boards[gs.otherPlayerIdx].getShipAt(
-                uint8(cellToFire)
+            uint256 hitShipType = gs.boards[gs.otherPlayerIdx].getShipAt(
+                cellToFire
             );
 
             if (hitShipType == Fleet.EMPTY) {
@@ -414,7 +414,7 @@ contract Game {
                         .fleets[gs.otherPlayerIdx]
                         .copyShipTo(
                             gs.opponentsDiscoveredFleet[gs.currentPlayerIdx],
-                            hitShipType
+                            uint8(hitShipType)
                         );
                 }
             }
@@ -500,8 +500,8 @@ contract Game {
                 fleetAndBoardsCached[1].fleet
             ];
             initialGameState.boards = [
-                fleetAndBoardsCached[0].board,
-                fleetAndBoardsCached[1].board
+                uint256(fleetAndBoardsCached[0].board),
+                uint256(fleetAndBoardsCached[1].board)
             ];
         }
 

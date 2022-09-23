@@ -118,8 +118,8 @@ contract GameTest is Test {
             [0, 0, 0, 0, 0, 0, 0, 0],
             [5, 5, 5, 5, 5, 0, 0, 0]
         ];
-        for (uint8 y = 0; y < 8; y++) {
-            for (uint8 x = 0; x < 8; x++) {
+        for (uint256 y = 0; y < 8; y++) {
+            for (uint256 x = 0; x < 8; x++) {
                 assertEq(board.getShipAt(y * 8 + x), manualBoard[y][x]);
             }
         }
