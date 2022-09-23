@@ -95,6 +95,3 @@ contract BattleTest is Test {
         return uint96(uint256(keccak256(abi.encodePacked(fleet, salt))));
     }
 }
-
-// TODO Try to decrease ints like the i in for loop and see if gas decreases
-// TODO Try to decrease gas limit per turn

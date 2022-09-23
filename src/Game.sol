@@ -61,7 +61,7 @@ contract Game {
         returns (Challenge[] memory allChallenges)
     {
         allChallenges = new Challenge[](challengeHashes.length);
-        for (uint32 i = 0; i < allChallenges.length; i++) {
+        for (uint256 i = 0; i < allChallenges.length; i++) {
             allChallenges[i] = challenges[challengeHashes[i]];
         }
     }
@@ -113,7 +113,6 @@ contract Game {
         if (facilitatorPercentage > PERCENTAGE_SCALE)
             revert FaciliatorPercentageUnitsWrong();
 
-        // TODO is the following problematic? Is it better to do challenges[challengeHash] = Challenge(Gear(), null, msg.value, ...)
         challenges[challengeHash].challenger = gear;
         challenges[challengeHash].bidAmount = msg.value;
         challenges[challengeHash].facilitatorPercentage = facilitatorPercentage;
@@ -295,11 +294,11 @@ contract Game {
     // attacks are represented using 192 bits. See Attacks library for the layout of bits
     using Attacks for uint192;
 
-    uint8 internal constant WIN_REASON_TKO_INVALID_MOVE = 1;
-    uint8 internal constant WIN_REASON_ELIMINATED_OPPONENT = 2;
-    uint8 internal constant WIN_REASON_INFLICTED_MORE_DAMAGE = 3;
-    uint8 internal constant DRAW = 5;
-    uint8 internal constant NO_WINNER = 5;
+    uint256 internal constant WIN_REASON_TKO_INVALID_MOVE = 1;
+    uint256 internal constant WIN_REASON_ELIMINATED_OPPONENT = 2;
+    uint256 internal constant WIN_REASON_INFLICTED_MORE_DAMAGE = 3;
+    uint256 internal constant DRAW = 5;
+    uint256 internal constant NO_WINNER = 5;
 
     // To avoid stack too deep errors, use a struct to pack all vars into one var
     // https://medium.com/1milliondevs/compilererror-stack-too-deep-try-removing-local-variables-solved-a6bcecc16231
@@ -314,17 +313,17 @@ contract Game {
         uint8[2] lastMoves;
         uint64[2] opponentsDiscoveredFleet;
         uint8[5][2] remainingCells;
-        uint8 currentPlayerIdx;
-        uint8 otherPlayerIdx;
-        uint8 winnerIdx;
-        uint8 winReason;
+        uint256 currentPlayerIdx;
+        uint256 otherPlayerIdx;
+        uint256 winnerIdx;
+        uint256 winReason;
         uint8[] gameHistory;
     }
 
     event BattleConcluded(
         bytes32 indexed challengeHash,
-        uint8 indexed winnerIdx,
-        uint8 indexed winReason,
+        uint256 indexed winnerIdx,
+        uint256 indexed winReason,
         uint8[] gameHistory,
         uint256 maxTurns,
         address facilitatorFeeAddress
@@ -486,7 +485,6 @@ contract Game {
         view
         returns (GameState memory initialGameState)
     {
-        // TODO is it cheaper to cache challenges[challengeHash] first?
         initialGameState.generals = [
             challenges[challengeHash].challenger.general,
             challenges[challengeHash].caller.general
@@ -536,7 +534,7 @@ contract Game {
 
         // need to randomly choose first general to start firing
         // use the timestamp as random input
-        initialGameState.currentPlayerIdx = uint8(block.timestamp) % 2; // TODO do  I need to take hash here. Also make sure that casting down takes rightmost bits
+        initialGameState.currentPlayerIdx = uint256(block.timestamp) % 2;
 
         initialGameState.winnerIdx = NO_WINNER;
         initialGameState.winReason = DRAW;
@@ -544,7 +542,9 @@ contract Game {
         // used for emitting gameHistory in the event. first item in the history is the
         // idx of the first player to fire. The rest of the items are cells fired by players
         initialGameState.gameHistory = new uint8[](maxTurns + 1);
-        initialGameState.gameHistory[0] = initialGameState.currentPlayerIdx;
+        initialGameState.gameHistory[0] = uint8(
+            initialGameState.currentPlayerIdx
+        );
     }
 
     function _getNumberOfDestroyedShips(
