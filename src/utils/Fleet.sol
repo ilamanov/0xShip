@@ -64,6 +64,16 @@ library Fleet {
 
     using Board for Board.BuildData;
 
+    // This struct is only used to avoid stack too deep errors, use a struct to pack all vars into one var
+    // https://medium.com/1milliondevs/compilererror-stack-too-deep-try-removing-local-variables-solved-a6bcecc16231
+    struct Coords {
+        uint8 start;
+        uint8 end;
+        uint8 diff;
+        uint8 horizontal;
+        uint8 vertical;
+    }
+
     // only used in Game.revealBoard to validate the fleet and store the board representation
     // of the fleet for faster lookup
     function validateFleetAndConvertToBoard(uint64 fleet)
@@ -75,72 +85,82 @@ library Fleet {
         // orientation (either horizontal or vertical)
 
         // ------------------------------ PATROL ship validation ------------------------------
-        uint8 patrolStart = getCoordsStart(fleet, PATROL);
-        uint8 patrolEnd = getCoordsEnd(fleet, PATROL);
+        Coords memory patrolCoords;
+        patrolCoords.start = getCoordsStart(fleet, PATROL);
+        patrolCoords.end = getCoordsEnd(fleet, PATROL);
         // start and end are guaranteed to be within [0, 64)
         // because we mask out the leading bits in getCoords[X]
-        if (patrolStart >= patrolEnd) revert CoordsAreNotSorted(PATROL);
+        if (patrolCoords.start >= patrolCoords.end)
+            revert CoordsAreNotSorted(PATROL);
 
-        uint8 patrolDiff = patrolEnd - patrolStart;
-        uint8 patrolHorizontal = PATROL_LENGTH - 1;
+        patrolCoords.diff = patrolCoords.end - patrolCoords.start;
+        patrolCoords.horizontal = PATROL_LENGTH - 1;
         // required difference between end and start coords of Patrol ship in horizontal orientation
-        uint8 patrolVertical = patrolHorizontal * 8;
+        patrolCoords.vertical = patrolCoords.horizontal * 8;
         // required difference in vertical orientation (because indices wrap around the 8x8 board)
-        if (!(patrolDiff == patrolHorizontal || patrolDiff == patrolVertical))
-            revert NotRightSizeOrOrientation(PATROL);
+        if (
+            !(patrolCoords.diff == patrolCoords.horizontal ||
+                patrolCoords.diff == patrolCoords.vertical)
+        ) revert NotRightSizeOrOrientation(PATROL);
 
         // ------------------------------ DESTROYER1 ship validation ------------------------------
-        uint8 destroyer1Start = getCoordsStart(fleet, DESTROYER1);
-        uint8 destroyer1End = getCoordsEnd(fleet, DESTROYER1);
-        if (destroyer1Start >= destroyer1End)
+        Coords memory destroyer1Coords;
+        destroyer1Coords.start = getCoordsStart(fleet, DESTROYER1);
+        destroyer1Coords.end = getCoordsEnd(fleet, DESTROYER1);
+        if (destroyer1Coords.start >= destroyer1Coords.end)
             revert CoordsAreNotSorted(DESTROYER1);
 
-        uint8 destroyer1Diff = destroyer1End - destroyer1Start;
-        uint8 destroyerHorizontal = DESTROYER_LENGTH - 1;
-        uint8 destroyerVertical = destroyerHorizontal * 8;
+        destroyer1Coords.diff = destroyer1Coords.end - destroyer1Coords.start;
+        destroyer1Coords.horizontal = DESTROYER_LENGTH - 1;
+        destroyer1Coords.vertical = destroyer1Coords.horizontal * 8;
         if (
-            !(destroyer1Diff == destroyerHorizontal ||
-                destroyer1Diff == destroyerVertical)
+            !(destroyer1Coords.diff == destroyer1Coords.horizontal ||
+                destroyer1Coords.diff == destroyer1Coords.vertical)
         ) revert NotRightSizeOrOrientation(DESTROYER1);
 
         // ------------------------------ DESTROYER2 ship validation ------------------------------
-        uint8 destroyer2Start = getCoordsStart(fleet, DESTROYER2);
-        uint8 destroyer2End = getCoordsEnd(fleet, DESTROYER2);
-        if (destroyer2Start >= destroyer2End)
+        Coords memory destroyer2Coords;
+        destroyer2Coords.start = getCoordsStart(fleet, DESTROYER2);
+        destroyer2Coords.end = getCoordsEnd(fleet, DESTROYER2);
+        if (destroyer2Coords.start >= destroyer2Coords.end)
             revert CoordsAreNotSorted(DESTROYER2);
 
-        uint8 destroyer2Diff = destroyer2End - destroyer2Start;
+        destroyer2Coords.diff = destroyer2Coords.end - destroyer2Coords.start;
         if (
-            !(destroyer2Diff == destroyerHorizontal ||
-                destroyer2Diff == destroyerVertical)
+            !(destroyer2Coords.diff == destroyer1Coords.horizontal ||
+                destroyer2Coords.diff == destroyer1Coords.vertical)
         ) revert NotRightSizeOrOrientation(DESTROYER2);
 
         // ------------------------------ BATTLESHIP ship validation ------------------------------
-        uint8 battleshipStart = getCoordsStart(fleet, BATTLESHIP);
-        uint8 battleshipEnd = getCoordsEnd(fleet, BATTLESHIP);
-        if (battleshipStart >= battleshipEnd)
+        Coords memory battleshipCoords;
+        battleshipCoords.start = getCoordsStart(fleet, BATTLESHIP);
+        battleshipCoords.end = getCoordsEnd(fleet, BATTLESHIP);
+        if (battleshipCoords.start >= battleshipCoords.end)
             revert CoordsAreNotSorted(BATTLESHIP);
 
-        uint8 battleshipDiff = battleshipEnd - battleshipStart;
-        uint8 battleshipHorizontal = BATTLESHIP_LENGTH - 1;
-        uint8 battleshipVertical = battleshipHorizontal * 8;
+        battleshipCoords.diff = battleshipCoords.end - battleshipCoords.start;
+        battleshipCoords.horizontal = BATTLESHIP_LENGTH - 1;
+        battleshipCoords.vertical = battleshipCoords.horizontal * 8;
         if (
-            !(battleshipDiff == battleshipHorizontal ||
-                battleshipDiff == battleshipVertical)
+            !(battleshipCoords.diff == battleshipCoords.horizontal ||
+                battleshipCoords.diff == battleshipCoords.vertical)
         ) revert NotRightSizeOrOrientation(BATTLESHIP);
 
         // ------------------------------ CARRIER ship validation ------------------------------
-        uint8 carrierStart = getCoordsStart(fleet, CARRIER);
-        uint8 carrierEnd = getCoordsEnd(fleet, CARRIER);
-        if (carrierStart >= carrierEnd) revert CoordsAreNotSorted(CARRIER);
+        Coords memory carrierCoords;
+        carrierCoords.start = getCoordsStart(fleet, CARRIER);
+        carrierCoords.end = getCoordsEnd(fleet, CARRIER);
+        if (carrierCoords.start >= carrierCoords.end)
+            revert CoordsAreNotSorted(CARRIER);
 
-        uint8 carrierDiff = carrierEnd - carrierStart;
-        uint8 carrierHorizontal = (CARRIER_LENGTH - 1) +
+        carrierCoords.diff = carrierCoords.end - carrierCoords.start;
+        carrierCoords.horizontal =
+            (CARRIER_LENGTH - 1) +
             (8 * (CARRIER_WIDTH - 1)); // carrier size is 4x2
-        uint8 carrierVertical = (CARRIER_LENGTH - 1) * 8 + (CARRIER_WIDTH - 1);
+        carrierCoords.vertical = (CARRIER_LENGTH - 1) * 8 + (CARRIER_WIDTH - 1);
         if (
-            !(carrierDiff == carrierHorizontal ||
-                carrierDiff == carrierVertical)
+            !(carrierCoords.diff == carrierCoords.horizontal ||
+                carrierCoords.diff == carrierCoords.vertical)
         ) revert NotRightSizeOrOrientation(CARRIER);
 
         // ------------------------------ building the board ------------------------------
@@ -150,11 +170,31 @@ library Fleet {
 
         // construct the board from fleet info
         Board.BuildData memory constructedBoard = Board.BuildData(0, 0);
-        constructedBoard.placeShip(patrolStart, patrolEnd, PATROL);
-        constructedBoard.placeShip(destroyer1Start, destroyer1End, DESTROYER1);
-        constructedBoard.placeShip(destroyer2Start, destroyer2End, DESTROYER2);
-        constructedBoard.placeShip(carrierStart, carrierEnd, CARRIER);
-        constructedBoard.placeShip(battleshipStart, battleshipEnd, BATTLESHIP);
+        constructedBoard.placeShip(
+            patrolCoords.start,
+            patrolCoords.end,
+            PATROL
+        );
+        constructedBoard.placeShip(
+            destroyer1Coords.start,
+            destroyer1Coords.end,
+            DESTROYER1
+        );
+        constructedBoard.placeShip(
+            destroyer2Coords.start,
+            destroyer2Coords.end,
+            DESTROYER2
+        );
+        constructedBoard.placeShip(
+            carrierCoords.start,
+            carrierCoords.end,
+            CARRIER
+        );
+        constructedBoard.placeShip(
+            battleshipCoords.start,
+            battleshipCoords.end,
+            BATTLESHIP
+        );
         return constructedBoard.board;
     }
 }

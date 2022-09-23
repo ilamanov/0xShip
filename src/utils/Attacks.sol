@@ -18,18 +18,18 @@ library Attacks {
     function isOfType(
         uint192 attacks,
         uint8 attackType,
-        uint8 cell
+        uint8 cellIdx
     ) internal pure returns (bool) {
-        uint8 shiftBy = (64 * (2 - attackType)) + cell;
+        uint8 shiftBy = (64 * (2 - attackType)) + cellIdx;
         return ((attacks >> shiftBy) & 0x1) == 1;
     }
 
     function markAs(
         uint192 attacks,
         uint8 attackType,
-        uint8 cell
+        uint8 cellIdx
     ) internal pure returns (uint192 updatedAttacks) {
-        uint64 oneMask = uint64(0x1 << cell);
+        uint64 oneMask = uint64(0x1 << cellIdx);
         uint64 zeroMask = ~oneMask;
         for (uint8 i = 0; i < 3; i++) {
             uint8 shiftChunkBy = 64 * (2 - i);
@@ -67,15 +67,14 @@ library Attacks {
         // TODO implement this for uint64
         return
             uint8(
-                hammingDistance32(uint32(v)) +
-                    hammingDistance32(uint32(v >> 32))
+                hammingDistance32(v & 0xFFFFFFFF) + hammingDistance32(v >> 32)
             );
     }
 
-    function hammingDistance32(uint32 v)
+    function hammingDistance32(uint64 v)
         private
         pure
-        returns (uint32 countOfOnes)
+        returns (uint64 countOfOnes)
     {
         // See http://graphics.stanford.edu/~seander/bithacks.html (Counting bits set, in parallel section)
         // Also see https://stackoverflow.com/questions/14555607/number-of-bits-set-in-a-number

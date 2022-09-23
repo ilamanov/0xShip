@@ -34,7 +34,7 @@ library Board {
     ) internal pure {
         // TODO is there a constant time bit operation that we can use instead of a loop in the function?
         uint8 startY = startCoord >> 3; // divide by 8
-        uint8 endY = startCoord >> 3;
+        uint8 endY = endCoord >> 3;
         uint8 startX = startCoord % 8;
         uint8 endX = endCoord % 8;
 
@@ -66,7 +66,7 @@ library Board {
         // You can't place another ship close than this padding
         for (uint8 y = startY; y <= endY; y++) {
             for (uint8 x = startX; x <= endX; x++) {
-                uint8 cellIdx = y << (3 + x);
+                uint8 cellIdx = (y << 3) + x;
                 uint192 mask = uint192(0x7) << (cellIdx * 3);
                 shipAndAdjacent |= mask;
             }

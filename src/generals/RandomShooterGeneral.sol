@@ -1,44 +1,52 @@
-// // SPDX-License-Identifier: UNLICENSED
-// pragma solidity ^0.8.13;
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.13;
 
-// import "./IGeneral.sol";
+import "./IGeneral.sol";
+import "../utils/Attacks.sol";
 
-// contract RandomShooterGeneral is IGeneral {
-//     address private _owner;
+contract RandomShooterGeneral is IGeneral {
+    using Attacks for uint192;
 
-//     constructor() {
-//         _owner = msg.sender;
-//     }
+    address private _owner;
 
-//     function owner() external view virtual returns (address) {
-//         return _owner;
-//     }
+    constructor() {
+        _owner = msg.sender;
+    }
 
-//     function fire(
-//         uint64 myBoard, // 8x8 board - initial placement
-//         uint256 myAttacks, // 8x8 board: 4 bits: 0 not touched, 1 miss, 2 hit, 3 destroyed
-//         uint256 otherAttacks
-//     )
-//         external
-//         virtual
-//         returns (
-//             // TO add prev move and metadata
-//             uint6
-//         )
-//     {
-//         // 6 bytes to index 8x8=64
-//         // TODO maybe return a smaller size int?
-//         // this will be used as initial entropy
-//         uint32 cellsCovered = bitwiseSum(myAttack); // TODO maybe smaller size?
-//         // this may overshoot because adjacent cells are marked as attacked automatically when ship sinks, but still
-//         uint72 cellToFire = uint72(
-//             uint256(keccak256(abi.encode(cellsCovered)))
-//         );
-//         while (myAttacks[cellToFire] != 0) {
-//             cellToFire = uint72(
-//                 uint256(keccak256(abi.encode(cellToFire + cellsCovered)))
-//             );
-//         }
-//         return cellToFire;
-//     }
-// }
+    function owner() external view returns (address) {
+        return _owner;
+    }
+
+    function fire(
+        uint192, /* myBoard */
+        uint192 myAttacks,
+        uint192, /* opponentsAttacks */
+        uint8 myLastMove,
+        uint8 opponentsLastMove,
+        uint64 /* opponentsDiscoveredFleet */
+    ) external pure returns (uint8) {
+        // use number of empty cells as initial entropy for random cellToFire
+        uint8 emptyCells = myAttacks.numberOfEmptyCells();
+        uint8 cellToFire = uint8(
+            uint256(
+                keccak256(abi.encode(emptyCells, myLastMove, opponentsLastMove))
+            )
+        ) % 64;
+        // while (!myAttacks.isOfType(Attacks.EMPTY, cellToFire)) {
+        //     cellToFire =
+        //         uint8(
+        //             uint256(
+        //                 keccak256(
+        //                     abi.encode(
+        //                         cellToFire,
+        //                         opponentsLastMove,
+        //                         emptyCells
+        //                     )
+        //                 )
+        //             )
+        //         ) %
+        //         64;
+        // }
+        return cellToFire;
+    }
+}
