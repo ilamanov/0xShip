@@ -123,7 +123,6 @@ contract GameTest is Test {
                 assertEq(board.getShipAt(y * 8 + x), manualBoard[y][x]);
             }
         }
-        // TODO actually test that fleets and boards have been revealed
         // TODO test overlaps including the adjacency
     }
 
