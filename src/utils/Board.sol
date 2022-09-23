@@ -43,10 +43,9 @@ library Board {
         uint256 ship; // cells occupied by this ship
         for (uint256 y = startY; y <= endY; y++) {
             for (uint256 x = startX; x <= endX; x++) {
-                uint256 cellIdx = (y << 3) + x;
-                uint256 mask = shipType << (3 * cellIdx);
-                // multiply by 3 in the mask because each cell takes up 3 bits
-                ship |= mask;
+                // to mark the cell we need to do shipType << (3 * cellIdx)
+                // where cellIdx = y * 8 + x = (y << 3) + x
+                ship |= shipType << (3 * ((y << 3) + x));
             }
         }
         if (ship & buildData.occupancyGrid != 0)
@@ -68,9 +67,8 @@ library Board {
         // You can't place another ship close than this padding
         for (uint256 y = startY; y <= endY; y++) {
             for (uint256 x = startX; x <= endX; x++) {
-                uint256 cellIdx = (y << 3) + x;
-                uint256 mask = 0x7 << (cellIdx * 3);
-                shipAndAdjacent |= mask;
+                // we do the same as in the above loop but use 111=0x7 instead of shipType
+                shipAndAdjacent |= 0x7 << (3 * ((y << 3) + x));
             }
         }
 
