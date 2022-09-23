@@ -66,7 +66,7 @@ library Attacks {
     }
 
     function hammingDistance64(uint256 v)
-        private
+        internal
         pure
         returns (uint256 countOfOnes)
     {
@@ -84,6 +84,6 @@ library Attacks {
         // and https://stackoverflow.com/questions/15233121/calculating-hamming-weight-in-o1
         v = v - ((v >> 1) & 0x55555555);
         v = (v & 0x33333333) + ((v >> 2) & 0x33333333);
-        return (((v + (v >> 4)) & 0xF0F0F0F) * 0x1010101) >> 24;
+        return uint32(((v + (v >> 4)) & 0xF0F0F0F) * 0x1010101) >> 24;
     }
 }
