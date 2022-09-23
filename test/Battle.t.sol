@@ -9,7 +9,7 @@ import "../src/generals/ConsecutiveShooterGeneral.sol";
 import "../src/utils/Fleet.sol";
 
 contract BattleTest is Test {
-    using Fleet for uint64;
+    using Fleet for uint256;
 
     // fleet1
     // 4 4 4 4 0 0 0 1
@@ -23,7 +23,7 @@ contract BattleTest is Test {
     //
     // 0000 | 7 | 15 | 21 | 37 | 25 | 41 | 0 | 11 | 56 | 60
     // 0000 | 000111 | 001111 | 010101 | 100101 | 011001 | 101001 | 000000 | 001011 | 111000 | 111100
-    uint64 private constant FLEET1 = 0x01CF56566900BE3C;
+    uint256 private constant FLEET1 = 0x01CF56566900BE3C;
     bytes32 private constant SALT1 = "2";
 
     // fleet2
@@ -39,7 +39,7 @@ contract BattleTest is Test {
     // 0000 | 37 | 45 | 16 | 32 | 47 | 63 | 48 | 59 | 19 | 23
     // 0000 | 100101 | 101101 | 010000 | 100000 | 101111 | 111111 | 110000 | 111011 | 010011 | 010111
     //
-    uint64 private constant FLEET2 = 0x096D420BFFC3B4D7;
+    uint256 private constant FLEET2 = 0x096D420BFFC3B4D7;
     bytes32 private constant SALT2 = "5";
 
     Game public game;
@@ -87,7 +87,7 @@ contract BattleTest is Test {
         );
     }
 
-    function _getFleetHash(uint64 fleet, bytes32 salt)
+    function _getFleetHash(uint256 fleet, bytes32 salt)
         private
         pure
         returns (uint96)

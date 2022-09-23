@@ -275,11 +275,9 @@ contract Game {
         // in order to prevent memoization of fleet, an optional salt can be used to make it harder
         // to reverse the hashing operation. salt can be any data.
 
-        uint64 fleet64 = uint64(fleet);
-
         if (
             fleetHash !=
-            uint96(uint256(keccak256(abi.encodePacked(fleet64, salt))))
+            uint96(uint256(keccak256(abi.encodePacked(fleet, salt))))
         ) revert InvalidFleetHash();
 
         // this function not only makes sure that the revealed fleet actually corresponds to the
@@ -288,7 +286,10 @@ contract Game {
         uint256 board = fleet.validateFleetAndConvertToBoard();
 
         // also store the board representation of the fleet for faster lookup
-        fleetsAndBoards[fleetHash] = FleetAndBoard(fleet64, uint192(board));
+        fleetsAndBoards[fleetHash] = FleetAndBoard(
+            uint64(fleet),
+            uint192(board)
+        );
 
         emit FleetRevealed(fleetHash, fleet, salt);
     }
