@@ -46,20 +46,25 @@ library Attacks {
         pure
         returns (uint256)
     {
-        return hammingDistance64((attacks >> UNTOUCHED) & 0xFFFFFFFFFFFFFFFF);
+        return
+            hammingDistance64(
+                (attacks >> (UNTOUCHED << 6)) & 0xFFFFFFFFFFFFFFFF
+            );
     }
 
     function numberOfMisses(uint256 attacks) internal pure returns (uint256) {
-        return hammingDistance64((attacks >> MISS) & 0xFFFFFFFFFFFFFFFF);
+        return hammingDistance64((attacks >> (MISS << 6)) & 0xFFFFFFFFFFFFFFFF);
     }
 
     function numberOfHits(uint256 attacks) internal pure returns (uint256) {
-        return hammingDistance64((attacks >> HIT) & 0xFFFFFFFFFFFFFFFF);
+        return hammingDistance64((attacks >> (HIT << 6)) & 0xFFFFFFFFFFFFFFFF);
     }
 
     function hasWon(uint256 attacks) internal pure returns (bool) {
         // hasWon is when numberOfHits == 21
-        return hammingDistance64((attacks >> HIT) & 0xFFFFFFFFFFFFFFFF) == 21; // 21 is total number of cells occupied by ships
+        return
+            hammingDistance64((attacks >> (HIT << 6)) & 0xFFFFFFFFFFFFFFFF) ==
+            21; // 21 is total number of cells occupied by ships
     }
 
     function hammingDistance64(uint256 x) internal pure returns (uint256) {
