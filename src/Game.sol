@@ -425,11 +425,11 @@ contract Game {
         if (gs.winnerIdx == NO_WINNER) {
             // game terminated due to maxTotalTurns
 
-            uint8 numberOfShipDestroyed0 = _getNumberOfDestroyedShips(
+            uint256 numberOfShipDestroyed0 = _getNumberOfDestroyedShips(
                 gs.remainingCells,
                 0
             );
-            uint8 numberOfShipDestroyed1 = _getNumberOfDestroyedShips(
+            uint256 numberOfShipDestroyed1 = _getNumberOfDestroyedShips(
                 gs.remainingCells,
                 1
             );
@@ -549,9 +549,9 @@ contract Game {
 
     function _getNumberOfDestroyedShips(
         uint256[5][2] memory remainingCells,
-        uint8 playerIdx
-    ) private pure returns (uint8 numberOfDestroyedShips) {
-        for (uint8 i = 0; i < 5; i++) {
+        uint256 playerIdx
+    ) private pure returns (uint256 numberOfDestroyedShips) {
+        for (uint256 i = 0; i < 5; i++) {
             if (remainingCells[playerIdx][i] == 0) {
                 numberOfDestroyedShips++;
             }
