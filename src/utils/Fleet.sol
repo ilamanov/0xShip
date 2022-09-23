@@ -8,7 +8,7 @@ error NotRightSizeOrOrientation(uint256 shipType);
 
 /**
  * Board is represented using 256 bits, but only rightmost 64 bits are used. Bit layout of the 64 bits:
- * [4 empty bits | 6 bits: patrol start coord | 6 bits: patrol end coord | 6 bits: destroyer1 start coord | ...]
+ * [4 empty bits | battleship start coord | battleship end coord | carrier start coord | ... | patrol end coord]
  * Each coord is 6 bits and it's an index into the 8x8 board, i.e. [0, 64)
  */
 library Fleet {
@@ -36,8 +36,7 @@ library Fleet {
         returns (uint256)
     {
         // each ship takes up 2*6=12 bits. Need to shift right by
-        // correct number of bits and take only the remaining 6 bits
-        // cast to 8-bitm and mask out the initial 2 bits
+        // correct number of bits and take only the remaining 12 bits (0xFFF is 12 ones)
         return (fleet >> (12 * (shipType - 1))) & 0xFFF;
     }
 
@@ -47,11 +46,8 @@ library Fleet {
         uint256 toFleet,
         uint256 shipType
     ) internal pure returns (uint256) {
-        uint256 shiftBy = 60 - 12 * shipType;
-        uint256 shipCoords = (fromFleet >> shiftBy) & 0xFFF; // shift and take last 12 bits
-        shipCoords <<= shiftBy; // shift back to its place
-        return toFleet | shipCoords; // notice that toFleet is assumed to have all zeros
-        // in the shipType's position, i.e. it does not manually clear out the bits
+        uint256 selectShip = 0xFFF << (shipType - 1); // 0xFFF is 12 ones
+        return (fromFleet & selectShip) | (toFleet & ~selectShip);
     }
 
     using Board for Board.BuildData;
@@ -89,7 +85,7 @@ library Fleet {
         patrolCoords.diff = patrolCoords.end - patrolCoords.start;
         patrolCoords.horizontal = PATROL_LENGTH - 1;
         // required difference between end and start coords of Patrol ship in horizontal orientation
-        patrolCoords.vertical = patrolCoords.horizontal * 8;
+        patrolCoords.vertical = patrolCoords.horizontal << 3; // "<< 3" is same as "* 8"
         // required difference in vertical orientation (because indices wrap around the 8x8 board)
         if (
             !(patrolCoords.diff == patrolCoords.horizontal ||
@@ -106,7 +102,7 @@ library Fleet {
 
         destroyer1Coords.diff = destroyer1Coords.end - destroyer1Coords.start;
         destroyer1Coords.horizontal = DESTROYER_LENGTH - 1;
-        destroyer1Coords.vertical = destroyer1Coords.horizontal * 8;
+        destroyer1Coords.vertical = destroyer1Coords.horizontal << 3;
         if (
             !(destroyer1Coords.diff == destroyer1Coords.horizontal ||
                 destroyer1Coords.diff == destroyer1Coords.vertical)
@@ -136,7 +132,7 @@ library Fleet {
 
         battleshipCoords.diff = battleshipCoords.end - battleshipCoords.start;
         battleshipCoords.horizontal = BATTLESHIP_LENGTH - 1;
-        battleshipCoords.vertical = battleshipCoords.horizontal * 8;
+        battleshipCoords.vertical = battleshipCoords.horizontal << 3;
         if (
             !(battleshipCoords.diff == battleshipCoords.horizontal ||
                 battleshipCoords.diff == battleshipCoords.vertical)
@@ -153,8 +149,10 @@ library Fleet {
         carrierCoords.diff = carrierCoords.end - carrierCoords.start;
         carrierCoords.horizontal =
             (CARRIER_LENGTH - 1) +
-            (8 * (CARRIER_WIDTH - 1)); // carrier size is 4x2
-        carrierCoords.vertical = (CARRIER_LENGTH - 1) * 8 + (CARRIER_WIDTH - 1);
+            ((CARRIER_WIDTH - 1) << 3); // carrier size is 4x2
+        carrierCoords.vertical =
+            ((CARRIER_LENGTH - 1) << 3) +
+            (CARRIER_WIDTH - 1);
         if (
             !(carrierCoords.diff == carrierCoords.horizontal ||
                 carrierCoords.diff == carrierCoords.vertical)
