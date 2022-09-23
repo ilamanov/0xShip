@@ -376,7 +376,7 @@ contract Game {
             // duplicate moves are ok
             if (
                 !gs.attacks[gs.currentPlayerIdx].isOfType(
-                    Attacks.EMPTY,
+                    Attacks.UNTOUCHED,
                     cellToFire
                 )
             ) {

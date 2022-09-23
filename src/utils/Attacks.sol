@@ -2,16 +2,17 @@
 pragma solidity ^0.8.13;
 
 /**
- * Attacks are represented using 256 bits but only use the rightmost 192 bits. Bit layout of the 192 bits:
- * [64 bits: whether a cell in untouched | 64 bits: whether a cell is a miss | 64 bits: whether a cell is a hit]
+ * Attacks are represented using 256 bits but only the rightmost 192 bits are used.
+ * Bit layout of the 192 bits:
+ * [64 bits: whether a cell is a hit | 64 bits: whether a cell is a miss | 64 bits: whether a cell is untouched]
  * Each 64-bit piece has a layout like this:
  * [bit for 63rd cell | bit for 62nd cell | bit for 0th cell]
  */
 library Attacks {
-    // initializer for new battle
-    uint256 internal constant EMPTY_ATTACKS = 0xFFFFFFFFFFFFFFFF << 128;
+    // initializer for new battle. All cells are untouched
+    uint256 internal constant EMPTY_ATTACKS = 0xFFFFFFFFFFFFFFFF;
 
-    uint256 internal constant EMPTY = 0;
+    uint256 internal constant UNTOUCHED = 0;
     uint256 internal constant MISS = 1;
     uint256 internal constant HIT = 2;
 
@@ -20,8 +21,9 @@ library Attacks {
         uint256 attackType,
         uint256 cellIdx
     ) internal pure returns (bool) {
-        uint256 shiftBy = (64 * (2 - attackType)) + cellIdx;
-        return ((attacks >> shiftBy) & 0x1) == 1;
+        // need to check whether attacks & (1 << shiftBy) is non-zero
+        // where shifyBy is (64 * attackType) + cellIdx
+        return (attacks & (1 << ((64 * attackType) + cellIdx))) > 0;
     }
 
     function markAs(
@@ -32,7 +34,7 @@ library Attacks {
         uint256 oneMask = 0x1 << cellIdx;
         uint256 zeroMask = (~oneMask) & 0xFFFFFFFFFFFFFFFF;
         for (uint256 i = 0; i < 3; i++) {
-            uint256 shiftChunkBy = 64 * (2 - i);
+            uint256 shiftChunkBy = 64 * i;
             uint256 chunk = (attacks >> shiftChunkBy) & 0xFFFFFFFFFFFFFFFF;
             if (i == attackType) {
                 chunk |= oneMask;
@@ -48,15 +50,15 @@ library Attacks {
         pure
         returns (uint256)
     {
-        return hammingDistance64((attacks >> 128) & 0xFFFFFFFFFFFFFFFF);
+        return hammingDistance64((attacks >> UNTOUCHED) & 0xFFFFFFFFFFFFFFFF);
     }
 
     function numberOfMisses(uint256 attacks) internal pure returns (uint256) {
-        return hammingDistance64((attacks >> 64) & 0xFFFFFFFFFFFFFFFF);
+        return hammingDistance64((attacks >> MISS) & 0xFFFFFFFFFFFFFFFF);
     }
 
     function numberOfHits(uint256 attacks) internal pure returns (uint256) {
-        return hammingDistance64(attacks & 0xFFFFFFFFFFFFFFFF);
+        return hammingDistance64((attacks >> HIT) & 0xFFFFFFFFFFFFFFFF);
     }
 
     function hasWon(uint256 attacks) internal pure returns (bool) {
