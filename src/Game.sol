@@ -312,7 +312,7 @@ contract Game {
         uint192[2] attacks;
         uint8[2] lastMoves;
         uint64[2] opponentsDiscoveredFleet;
-        uint8[5][2] remainingCells;
+        uint256[5][2] remainingCells;
         uint256 currentPlayerIdx;
         uint256 otherPlayerIdx;
         uint256 winnerIdx;
@@ -397,7 +397,7 @@ contract Game {
                     .markAs(Attacks.HIT, cellToFire);
 
                 // decrement number of cells remaining for the hit ship
-                uint8 hitShipRemainingCells = --gs.remainingCells[
+                uint256 hitShipRemainingCells = --gs.remainingCells[
                     gs.otherPlayerIdx
                 ][hitShipType - 1];
 
@@ -548,7 +548,7 @@ contract Game {
     }
 
     function _getNumberOfDestroyedShips(
-        uint8[5][2] memory remainingCells,
+        uint256[5][2] memory remainingCells,
         uint8 playerIdx
     ) private pure returns (uint8 numberOfDestroyedShips) {
         for (uint8 i = 0; i < 5; i++) {

@@ -24,11 +24,11 @@ library Fleet {
     uint8 internal constant BATTLESHIP = 5;
 
     // ship sizes
-    uint8 internal constant PATROL_LENGTH = 2;
-    uint8 internal constant DESTROYER_LENGTH = 3;
-    uint8 internal constant CARRIER_LENGTH = 4;
-    uint8 internal constant CARRIER_WIDTH = 2;
-    uint8 internal constant BATTLESHIP_LENGTH = 5;
+    uint256 internal constant PATROL_LENGTH = 2;
+    uint256 internal constant DESTROYER_LENGTH = 3;
+    uint256 internal constant CARRIER_LENGTH = 4;
+    uint256 internal constant CARRIER_WIDTH = 2;
+    uint256 internal constant BATTLESHIP_LENGTH = 5;
 
     function getCoordsStart(uint64 fleet, uint8 shipType)
         internal
@@ -70,8 +70,8 @@ library Fleet {
         uint8 start;
         uint8 end;
         uint8 diff;
-        uint8 horizontal;
-        uint8 vertical;
+        uint256 horizontal;
+        uint256 vertical;
     }
 
     // only used in Game.revealBoard to validate the fleet and store the board representation
