@@ -22,9 +22,10 @@ contract GameTest is Test {
     // 0 0 0 0 0 0 0 0
     // 5 5 5 5 5 0 0 0
     //
-    // 0000 | 7 | 15 | 21 | 37 | 25 | 41 | 0 | 11 | 56 | 60
-    // 0000 | 000111 | 001111 | 010101 | 100101 | 011001 | 101001 | 000000 | 001011 | 111000 | 111100
-    uint256 private constant FLEET1 = 0x01CF56566900BE3C;
+    // 0000 | 56 | 60 | 0 | 11 | 25 | 41 | 21 | 37 | 7 | 15
+    // 0000 | 111000 | 111100 | 000000 | 001011 | 011001 | 101001 | 010101 | 100101 | 000111 | 001111
+    //
+    uint256 private constant FLEET1 = 0xE3C00B6695651CF;
     bytes32 private constant SALT1 = "2";
 
     // fleet2
@@ -37,10 +38,10 @@ contract GameTest is Test {
     // 4 4 4 4 0 0 0 3
     // 4 4 4 4 0 0 0 3
     //
-    // 0000 | 37 | 45 | 16 | 32 | 47 | 63 | 48 | 59 | 19 | 23
-    // 0000 | 100101 | 101101 | 010000 | 100000 | 101111 | 111111 | 110000 | 111011 | 010011 | 010111
+    // 0000 | 19 | 23 | 48 | 59 | 47 | 63 | 16 | 32 | 37 | 45
+    // 0000 | 010011 | 010111 | 110000 | 111011 | 101111 | 111111 | 010000 | 100000 | 100101 | 101101
     //
-    uint256 private constant FLEET2 = 0x096D420BFFC3B4D7;
+    uint256 private constant FLEET2 = 0x4D7C3BBFF42096D;
     bytes32 private constant SALT2 = "5";
 
     Game public game;
@@ -91,16 +92,11 @@ contract GameTest is Test {
         _submitChallenge();
         _acceptChallenge();
         // 7 | 15 | 21 | 37 | 25 | 41 | 0 | 11 | 56 | 60
-        assertEq(FLEET1.getCoordsStart(Fleet.PATROL), 7);
-        assertEq(FLEET1.getCoordsEnd(Fleet.PATROL), 15);
-        assertEq(FLEET1.getCoordsStart(Fleet.DESTROYER1), 21);
-        assertEq(FLEET1.getCoordsEnd(Fleet.DESTROYER1), 37);
-        assertEq(FLEET1.getCoordsStart(Fleet.DESTROYER2), 25);
-        assertEq(FLEET1.getCoordsEnd(Fleet.DESTROYER2), 41);
-        assertEq(FLEET1.getCoordsStart(Fleet.CARRIER), 0);
-        assertEq(FLEET1.getCoordsEnd(Fleet.CARRIER), 11);
-        assertEq(FLEET1.getCoordsStart(Fleet.BATTLESHIP), 56);
-        assertEq(FLEET1.getCoordsEnd(Fleet.BATTLESHIP), 60);
+        _assertCoords(FLEET1, Fleet.PATROL, 7, 15);
+        _assertCoords(FLEET1, Fleet.DESTROYER1, 21, 37);
+        _assertCoords(FLEET1, Fleet.DESTROYER2, 25, 41);
+        _assertCoords(FLEET1, Fleet.CARRIER, 0, 11);
+        _assertCoords(FLEET1, Fleet.BATTLESHIP, 56, 60);
         _revealFleet();
         Game.Challenge[] memory challenges = game.getAllChallenges();
         assertEq(challenges.length, 1);
@@ -132,6 +128,17 @@ contract GameTest is Test {
             }
         }
         // TODO test overlaps including the adjacency
+    }
+
+    function _assertCoords(
+        uint256 fleet,
+        uint256 shipType,
+        uint256 startCoord,
+        uint256 endCoord
+    ) private {
+        uint256 coords = fleet.getCoords(shipType);
+        assertEq(coords >> 6, startCoord);
+        assertEq(coords & 0x3F, endCoord);
     }
 
     function testBattle() public {

@@ -30,7 +30,7 @@ library Fleet {
     uint256 internal constant CARRIER_WIDTH = 2;
     uint256 internal constant BATTLESHIP_LENGTH = 5;
 
-    function getCoordsStart(uint256 fleet, uint256 shipType)
+    function getCoords(uint256 fleet, uint256 shipType)
         internal
         pure
         returns (uint256)
@@ -38,15 +38,7 @@ library Fleet {
         // each ship takes up 2*6=12 bits. Need to shift right by
         // correct number of bits and take only the remaining 6 bits
         // cast to 8-bitm and mask out the initial 2 bits
-        return (fleet >> (66 - (12 * shipType))) & 0x3F;
-    }
-
-    function getCoordsEnd(uint256 fleet, uint256 shipType)
-        internal
-        pure
-        returns (uint256)
-    {
-        return (fleet >> (60 - (12 * shipType))) & 0x3F;
+        return (fleet >> (12 * (shipType - 1))) & 0xFFF;
     }
 
     // populate toFleet with the coords of shipType from fromFleet
@@ -86,8 +78,9 @@ library Fleet {
 
         // ------------------------------ PATROL ship validation ------------------------------
         Coords memory patrolCoords;
-        patrolCoords.start = getCoordsStart(fleet, PATROL);
-        patrolCoords.end = getCoordsEnd(fleet, PATROL);
+        uint256 tmpCoords = getCoords(fleet, PATROL);
+        patrolCoords.start = tmpCoords >> 6;
+        patrolCoords.end = tmpCoords & 0x3F;
         // start and end are guaranteed to be within [0, 64)
         // because we mask out the leading bits in getCoords[X]
         if (patrolCoords.start >= patrolCoords.end)
@@ -105,8 +98,9 @@ library Fleet {
 
         // ------------------------------ DESTROYER1 ship validation ------------------------------
         Coords memory destroyer1Coords;
-        destroyer1Coords.start = getCoordsStart(fleet, DESTROYER1);
-        destroyer1Coords.end = getCoordsEnd(fleet, DESTROYER1);
+        tmpCoords = getCoords(fleet, DESTROYER1);
+        destroyer1Coords.start = tmpCoords >> 6;
+        destroyer1Coords.end = tmpCoords & 0x3F;
         if (destroyer1Coords.start >= destroyer1Coords.end)
             revert CoordsAreNotSorted(DESTROYER1);
 
@@ -120,8 +114,9 @@ library Fleet {
 
         // ------------------------------ DESTROYER2 ship validation ------------------------------
         Coords memory destroyer2Coords;
-        destroyer2Coords.start = getCoordsStart(fleet, DESTROYER2);
-        destroyer2Coords.end = getCoordsEnd(fleet, DESTROYER2);
+        tmpCoords = getCoords(fleet, DESTROYER2);
+        destroyer2Coords.start = tmpCoords >> 6;
+        destroyer2Coords.end = tmpCoords & 0x3F;
         if (destroyer2Coords.start >= destroyer2Coords.end)
             revert CoordsAreNotSorted(DESTROYER2);
 
@@ -133,8 +128,9 @@ library Fleet {
 
         // ------------------------------ BATTLESHIP ship validation ------------------------------
         Coords memory battleshipCoords;
-        battleshipCoords.start = getCoordsStart(fleet, BATTLESHIP);
-        battleshipCoords.end = getCoordsEnd(fleet, BATTLESHIP);
+        tmpCoords = getCoords(fleet, BATTLESHIP);
+        battleshipCoords.start = tmpCoords >> 6;
+        battleshipCoords.end = tmpCoords & 0x3F;
         if (battleshipCoords.start >= battleshipCoords.end)
             revert CoordsAreNotSorted(BATTLESHIP);
 
@@ -148,8 +144,9 @@ library Fleet {
 
         // ------------------------------ CARRIER ship validation ------------------------------
         Coords memory carrierCoords;
-        carrierCoords.start = getCoordsStart(fleet, CARRIER);
-        carrierCoords.end = getCoordsEnd(fleet, CARRIER);
+        tmpCoords = getCoords(fleet, CARRIER);
+        carrierCoords.start = tmpCoords >> 6;
+        carrierCoords.end = tmpCoords & 0x3F;
         if (carrierCoords.start >= carrierCoords.end)
             revert CoordsAreNotSorted(CARRIER);
 
