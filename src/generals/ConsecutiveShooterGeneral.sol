@@ -29,6 +29,9 @@ contract ConsecutiveShooterGeneral is IGeneral {
             // game just started
             return 0;
         }
+        if (myLastMove == 63) {
+            return 63;
+        }
         return myLastMove + 1;
     }
 }

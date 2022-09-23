@@ -15,7 +15,7 @@ error ChallengerDoesNotWantToPlayAgainstYou();
 error FaciliatorPercentageUnitsWrong();
 error NotEnoughEth();
 error InvalidFleetHash();
-error InvalidMaxTotalTurnsToPlay();
+error InvalidMaxTurns();
 
 /**
  * @title 0xShip: On-Chain Battleship Game
@@ -91,6 +91,7 @@ contract Game {
 
     // constant to scale uints into percentages (1e4 == 100%)
     uint96 private constant PERCENTAGE_SCALE = 1e4;
+
     event ChallengeSubmitted(
         bytes32 indexed challengeHash,
         uint256 indexed bidAmount,
@@ -237,8 +238,15 @@ contract Game {
         uint64 fleet;
         uint192 board;
     }
+
     // fleetHash to FleetAndBoard
     mapping(uint96 => FleetAndBoard) public fleetsAndBoards;
+
+    event FleetRevealed(
+        uint96 indexed fleetHash,
+        uint64 indexed fleet,
+        bytes32 salt
+    );
 
     function revealFleetsAndStartBattle(
         uint96 fleetHash1,
@@ -248,19 +256,13 @@ contract Game {
         uint64 fleet2,
         bytes32 salt2,
         bytes32 challengeHash,
-        uint256 maxTotalTurnsToPlay,
+        uint256 maxTurns,
         address facilitatorFeeAddress
     ) external {
         revealFleet(fleetHash1, fleet1, salt1);
         revealFleet(fleetHash2, fleet2, salt2);
-        startBattle(challengeHash, maxTotalTurnsToPlay, facilitatorFeeAddress);
+        startBattle(challengeHash, maxTurns, facilitatorFeeAddress);
     }
-
-    event FleetRevealed(
-        uint96 indexed fleetHash,
-        uint64 indexed fleet,
-        bytes32 salt
-    );
 
     function revealFleet(
         uint96 fleetHash,
@@ -302,9 +304,12 @@ contract Game {
     // To avoid stack too deep errors, use a struct to pack all vars into one var
     // https://medium.com/1milliondevs/compilererror-stack-too-deep-try-removing-local-variables-solved-a6bcecc16231
     struct GameState {
+        // The first 3 arrays are constant
+        // TODO is it possible to shave off gas due to them being constant?
         IGeneral[2] generals;
         uint64[2] fleets;
         uint192[2] boards;
+        // everything else is not constant
         uint192[2] attacks;
         uint8[2] lastMoves;
         uint64[2] opponentsDiscoveredFleet;
@@ -321,59 +326,198 @@ contract Game {
         uint8 indexed winnerIdx,
         uint8 indexed winReason,
         uint8[] gameHistory,
-        uint256 maxTotalTurnsToPlay,
+        uint256 maxTurns,
         address facilitatorFeeAddress
     );
 
     function startBattle(
         bytes32 challengeHash,
-        uint256 maxTotalTurnsToPlay,
+        uint256 maxTurns,
         address facilitatorFeeAddress
     ) public {
-        if (
-            ((maxTotalTurnsToPlay % 2) != 0) || (maxTotalTurnsToPlay < 21) // // the least amount of moves to win the game
-        ) revert InvalidMaxTotalTurnsToPlay();
-        // TODO is it cheaper to cache challenges[challengeHash] first?
+        GameState memory gs = _getInitialGameState(challengeHash, maxTurns);
 
-        // ------------ convert game parameters into easily queriable format ------------
-        // ------------------- all the following arrays are constant --------------------
-        // TODO(nit): is it possible to make these arrays constant?
-        GameState memory gameState;
-        gameState.generals = [
+        if (address(gs.generals[1]) == address(0))
+            revert ChallengeNeedsToBeLocked();
+        if (gs.fleets[0] == 0 || gs.fleets[1] == 0)
+            revert FleetsNeedToHaveBeenRevealed();
+        if (
+            ((maxTurns % 2) != 0) || (maxTurns < 21) // // the least amount of moves to win the game
+        ) revert InvalidMaxTurns();
+
+        for (uint256 i = 0; i < maxTurns; i++) {
+            gs.otherPlayerIdx = (gs.currentPlayerIdx + 1) % 2;
+            uint8 cellToFire;
+
+            try
+                gs.generals[gs.currentPlayerIdx].fire{gas: 4_000}(
+                    gs.boards[gs.currentPlayerIdx],
+                    gs.attacks[gs.currentPlayerIdx],
+                    gs.attacks[gs.otherPlayerIdx],
+                    gs.lastMoves[gs.currentPlayerIdx],
+                    gs.lastMoves[gs.otherPlayerIdx],
+                    gs.opponentsDiscoveredFleet[gs.currentPlayerIdx]
+                )
+            returns (uint8 ret) {
+                cellToFire = ret;
+            } catch {}
+
+            gs.gameHistory[i + 1] = cellToFire;
+            gs.lastMoves[gs.currentPlayerIdx] = cellToFire;
+
+            if (cellToFire >= 64) {
+                // if a general outputs a non-valid move, it's a TKO
+                gs.winnerIdx = gs.otherPlayerIdx;
+                gs.winReason = WIN_REASON_TKO_INVALID_MOVE;
+                break;
+            }
+
+            // duplicate moves are ok
+            if (
+                !gs.attacks[gs.currentPlayerIdx].isOfType(
+                    Attacks.EMPTY,
+                    cellToFire
+                )
+            ) {
+                gs.currentPlayerIdx = gs.otherPlayerIdx;
+                continue;
+            }
+
+            uint8 hitShipType = gs.boards[gs.otherPlayerIdx].getShipAt(
+                cellToFire
+            );
+
+            if (hitShipType == Fleet.EMPTY) {
+                gs.attacks[gs.currentPlayerIdx] = gs
+                    .attacks[gs.currentPlayerIdx]
+                    .markAs(Attacks.MISS, cellToFire);
+            } else {
+                // it's a hit
+                gs.attacks[gs.currentPlayerIdx] = gs
+                    .attacks[gs.currentPlayerIdx]
+                    .markAs(Attacks.HIT, cellToFire);
+
+                // decrement number of cells remaining for the hit ship
+                uint8 hitShipRemainingCells = --gs.remainingCells[
+                    gs.otherPlayerIdx
+                ][hitShipType - 1];
+
+                if (hitShipRemainingCells == 0) {
+                    // ship destroyed
+
+                    if (gs.attacks[gs.currentPlayerIdx].hasWon()) {
+                        gs.winnerIdx = gs.currentPlayerIdx;
+                        gs.winReason = WIN_REASON_ELIMINATED_OPPONENT;
+                        break;
+                    }
+
+                    gs.opponentsDiscoveredFleet[gs.currentPlayerIdx] = gs
+                        .fleets[gs.otherPlayerIdx]
+                        .copyShipTo(
+                            gs.opponentsDiscoveredFleet[gs.currentPlayerIdx],
+                            hitShipType
+                        );
+                }
+            }
+
+            gs.currentPlayerIdx = gs.otherPlayerIdx;
+        }
+
+        if (gs.winnerIdx == NO_WINNER) {
+            // game terminated due to maxTotalTurns
+
+            uint8 numberOfShipDestroyed0 = _getNumberOfDestroyedShips(
+                gs.remainingCells,
+                0
+            );
+            uint8 numberOfShipDestroyed1 = _getNumberOfDestroyedShips(
+                gs.remainingCells,
+                1
+            );
+
+            if (numberOfShipDestroyed0 > numberOfShipDestroyed1) {
+                gs.winnerIdx = 0;
+                gs.winReason = WIN_REASON_INFLICTED_MORE_DAMAGE;
+            } else if (numberOfShipDestroyed0 < numberOfShipDestroyed1) {
+                gs.winnerIdx = 1;
+                gs.winReason = WIN_REASON_INFLICTED_MORE_DAMAGE;
+            } // else draw
+        }
+
+        // Distribute the proceeds
+        uint256 amountToSplit = challenges[challengeHash].bidAmount;
+
+        if (amountToSplit > 0) {
+            uint256 facilitatorFee = (amountToSplit *
+                challenges[challengeHash].facilitatorPercentage) /
+                PERCENTAGE_SCALE;
+            payable(facilitatorFeeAddress).transfer(facilitatorFee);
+
+            if (gs.winnerIdx == NO_WINNER) {
+                amountToSplit = (amountToSplit - facilitatorFee) / 2;
+                payable(gs.generals[0].owner()).transfer(amountToSplit);
+                payable(gs.generals[1].owner()).transfer(amountToSplit);
+            } else {
+                amountToSplit -= facilitatorFee;
+                payable(gs.generals[gs.winnerIdx].owner()).transfer(
+                    amountToSplit
+                );
+            }
+            challenges[challengeHash].bidAmount = 0;
+        }
+
+        // after game is played the challenge becomes a "public good". Anyone can accept the
+        // challenge again and play for free
+        delete challenges[challengeHash].caller;
+        delete challenges[challengeHash].preferredOpponent;
+
+        emit BattleConcluded(
+            challengeHash,
+            gs.winnerIdx,
+            gs.winReason,
+            gs.gameHistory,
+            maxTurns,
+            facilitatorFeeAddress
+        );
+    }
+
+    function _getInitialGameState(bytes32 challengeHash, uint256 maxTurns)
+        private
+        view
+        returns (GameState memory initialGameState)
+    {
+        // TODO is it cheaper to cache challenges[challengeHash] first?
+        initialGameState.generals = [
             challenges[challengeHash].challenger.general,
             challenges[challengeHash].caller.general
         ];
-        if (address(gameState.generals[1]) == address(0))
-            revert ChallengeNeedsToBeLocked();
 
         {
             FleetAndBoard[2] memory fleetAndBoardsCached = [
                 fleetsAndBoards[challenges[challengeHash].challenger.fleetHash],
                 fleetsAndBoards[challenges[challengeHash].caller.fleetHash]
             ];
-            gameState.fleets = [
+            initialGameState.fleets = [
                 fleetAndBoardsCached[0].fleet,
                 fleetAndBoardsCached[1].fleet
             ];
-            if (gameState.fleets[0] == 0 || gameState.fleets[1] == 0)
-                revert FleetsNeedToHaveBeenRevealed();
-
-            gameState.boards = [
+            initialGameState.boards = [
                 fleetAndBoardsCached[0].board,
                 fleetAndBoardsCached[1].board
             ];
         }
 
-        // ------------------------ next arrays are not constant ------------------------
-        // ------------------------ they store current game state -----------------------
-        gameState.attacks = [Attacks.EMPTY_ATTACKS, Attacks.EMPTY_ATTACKS];
-        gameState.lastMoves = [255, 255]; // initialize with 255 because 255 is an invalid move.
+        initialGameState.attacks = [
+            Attacks.EMPTY_ATTACKS,
+            Attacks.EMPTY_ATTACKS
+        ];
+        initialGameState.lastMoves = [255, 255]; // initialize with 255 because 255 is an invalid move.
         //                                        valid moves are indicies into the 8x8 board, i.e. [0, 64)
-        gameState.opponentsDiscoveredFleet = [
+        initialGameState.opponentsDiscoveredFleet = [
             Fleet.EMPTY_FLEET,
             Fleet.EMPTY_FLEET
         ];
-        gameState.remainingCells = [
+        initialGameState.remainingCells = [
             [
                 Fleet.PATROL_LENGTH,
                 Fleet.DESTROYER_LENGTH,
@@ -392,160 +536,18 @@ contract Game {
 
         // need to randomly choose first general to start firing
         // use the timestamp as random input
-        gameState.currentPlayerIdx = uint8(block.timestamp) % 2; // TODO do  I need to take hash here. Also make sure that casting down takes rightmost bits
-        gameState.otherPlayerIdx;
+        initialGameState.currentPlayerIdx = uint8(block.timestamp) % 2; // TODO do  I need to take hash here. Also make sure that casting down takes rightmost bits
 
-        gameState.winnerIdx = NO_WINNER;
-        gameState.winReason = DRAW;
+        initialGameState.winnerIdx = NO_WINNER;
+        initialGameState.winReason = DRAW;
 
         // used for emitting gameHistory in the event. first item in the history is the
         // idx of the first player to fire. The rest of the items are cells fired by players
-        gameState.gameHistory = new uint8[](maxTotalTurnsToPlay + 1);
-        gameState.gameHistory[0] = gameState.currentPlayerIdx;
-
-        for (uint256 i = 0; i < maxTotalTurnsToPlay; i++) {
-            gameState.otherPlayerIdx = (gameState.currentPlayerIdx + 1) % 2;
-            uint8 cellToFire;
-
-            try
-                gameState.generals[gameState.currentPlayerIdx].fire{gas: 4_000}(
-                    gameState.boards[gameState.currentPlayerIdx],
-                    gameState.attacks[gameState.currentPlayerIdx],
-                    gameState.attacks[gameState.otherPlayerIdx],
-                    gameState.lastMoves[gameState.currentPlayerIdx],
-                    gameState.lastMoves[gameState.otherPlayerIdx],
-                    gameState.opponentsDiscoveredFleet[
-                        gameState.currentPlayerIdx
-                    ]
-                )
-            returns (uint8 ret) {
-                cellToFire = ret;
-            } catch {}
-
-            gameState.gameHistory[i + 1] = cellToFire;
-
-            if (cellToFire >= 64) {
-                // if a general outputs a non-valid move, it's a TKO
-                gameState.winnerIdx = gameState.otherPlayerIdx;
-                gameState.winReason = WIN_REASON_TKO_INVALID_MOVE;
-                break;
-            }
-
-            gameState.lastMoves[gameState.currentPlayerIdx] = cellToFire;
-
-            // duplicate moves are ok
-            if (
-                !gameState.attacks[gameState.currentPlayerIdx].isOfType(
-                    Attacks.EMPTY,
-                    cellToFire
-                )
-            ) {
-                gameState.currentPlayerIdx = gameState.otherPlayerIdx;
-                continue;
-            }
-
-            uint8 hitShipType = gameState
-                .boards[gameState.otherPlayerIdx]
-                .getShipAt(cellToFire);
-
-            if (hitShipType == Fleet.EMPTY) {
-                gameState.attacks[gameState.currentPlayerIdx] = gameState
-                    .attacks[gameState.currentPlayerIdx]
-                    .markAs(Attacks.MISS, cellToFire);
-            } else {
-                // it's a hit
-                gameState.attacks[gameState.currentPlayerIdx] = gameState
-                    .attacks[gameState.currentPlayerIdx]
-                    .markAs(Attacks.HIT, cellToFire);
-
-                // decrement number of cells remaining for the hit ship
-                uint8 hitShipRemainingCells = --gameState.remainingCells[
-                    gameState.otherPlayerIdx
-                ][hitShipType - 1];
-
-                if (hitShipRemainingCells == 0) {
-                    // ship destroyed
-
-                    if (
-                        gameState.attacks[gameState.currentPlayerIdx].hasWon()
-                    ) {
-                        gameState.winnerIdx = gameState.currentPlayerIdx;
-                        gameState.winReason = WIN_REASON_ELIMINATED_OPPONENT;
-                        break;
-                    }
-
-                    gameState.opponentsDiscoveredFleet[
-                        gameState.currentPlayerIdx
-                    ] = gameState.fleets[gameState.otherPlayerIdx].copyShipTo(
-                        gameState.opponentsDiscoveredFleet[
-                            gameState.currentPlayerIdx
-                        ],
-                        hitShipType
-                    );
-                }
-            }
-
-            gameState.currentPlayerIdx = gameState.otherPlayerIdx;
-        }
-
-        if (gameState.winnerIdx == NO_WINNER) {
-            // game terminated due to maxTotalTurns
-
-            uint8 numberOfShipDestroyed0 = getNumberOfDestroyedShips(
-                gameState.remainingCells,
-                0
-            );
-            uint8 numberOfShipDestroyed1 = getNumberOfDestroyedShips(
-                gameState.remainingCells,
-                1
-            );
-
-            if (numberOfShipDestroyed0 > numberOfShipDestroyed1) {
-                gameState.winnerIdx = 0;
-                gameState.winReason = WIN_REASON_INFLICTED_MORE_DAMAGE;
-            } else if (numberOfShipDestroyed0 < numberOfShipDestroyed1) {
-                gameState.winnerIdx = 1;
-                gameState.winReason = WIN_REASON_INFLICTED_MORE_DAMAGE;
-            } // else draw
-        }
-
-        // Distribute the proceeds
-        uint256 amountToSplit = challenges[challengeHash].bidAmount;
-
-        if (amountToSplit > 0) {
-            uint256 facilitatorFee = (amountToSplit *
-                challenges[challengeHash].facilitatorPercentage) /
-                PERCENTAGE_SCALE;
-            payable(facilitatorFeeAddress).transfer(facilitatorFee);
-
-            if (gameState.winnerIdx == NO_WINNER) {
-                amountToSplit = (amountToSplit - facilitatorFee) / 2;
-                payable(gameState.generals[0].owner()).transfer(amountToSplit);
-                payable(gameState.generals[1].owner()).transfer(amountToSplit);
-            } else {
-                amountToSplit -= facilitatorFee;
-                payable(gameState.generals[gameState.winnerIdx].owner())
-                    .transfer(amountToSplit);
-            }
-            challenges[challengeHash].bidAmount = 0;
-        }
-
-        // after game is played the challenge becomes a "public good". Anyone can accept the
-        // challenge again and play for free
-        delete challenges[challengeHash].caller;
-        delete challenges[challengeHash].preferredOpponent;
-
-        emit BattleConcluded(
-            challengeHash,
-            gameState.winnerIdx,
-            gameState.winReason,
-            gameState.gameHistory,
-            maxTotalTurnsToPlay,
-            facilitatorFeeAddress
-        );
+        initialGameState.gameHistory = new uint8[](maxTurns + 1);
+        initialGameState.gameHistory[0] = initialGameState.currentPlayerIdx;
     }
 
-    function getNumberOfDestroyedShips(
+    function _getNumberOfDestroyedShips(
         uint8[5][2] memory remainingCells,
         uint8 playerIdx
     ) private pure returns (uint8 numberOfDestroyedShips) {
