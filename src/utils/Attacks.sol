@@ -58,24 +58,24 @@ library Attacks {
     }
 
     function hasWon(uint256 attacks) internal pure returns (bool) {
-        return numberOfHits(attacks) == 21; // 21 is total number of cells occupied by ships
+        // hasWon is when numberOfHits == 21
+        return hammingDistance64((attacks >> HIT) & 0xFFFFFFFFFFFFFFFF) == 21; // 21 is total number of cells occupied by ships
     }
 
     function hammingDistance64(uint256 x) internal pure returns (uint256) {
-        // TODO implement this for uint64
-        return hammingDistance32(x & 0xFFFFFFFF) + hammingDistance32(x >> 32);
-    }
+        // Computes hamming distance (weight) of a 64-bit number.
+        // Hamming distance is number of bits that are set to 1. See:
+        // - https://en.wikipedia.org/wiki/Hamming_weight
+        // - https://stackoverflow.com/questions/2709430/count-number-of-bits-in-a-64-bit-long-big-integer
+        // and for 32-bit version see:
+        // - http://graphics.stanford.edu/~seander/bithacks.html (Counting bits set, in parallel section)
+        // - https://stackoverflow.com/questions/14555607/number-of-bits-set-in-a-number
+        // - https://stackoverflow.com/questions/15233121/calculating-hamming-weight-in-o1
 
-    function hammingDistance32(uint256 v)
-        private
-        pure
-        returns (uint256 countOfOnes)
-    {
-        // See http://graphics.stanford.edu/~seander/bithacks.html (Counting bits set, in parallel section)
-        // Also see https://stackoverflow.com/questions/14555607/number-of-bits-set-in-a-number
-        // and https://stackoverflow.com/questions/15233121/calculating-hamming-weight-in-o1
-        v = v - ((v >> 1) & 0x55555555);
-        v = (v & 0x33333333) + ((v >> 2) & 0x33333333);
-        return uint32(((v + (v >> 4)) & 0xF0F0F0F) * 0x1010101) >> 24;
+        // implementation from https://en.wikipedia.org/wiki/Hamming_weight
+        x -= (x >> 1) & 0x5555555555555555; // put count of each 2 bits into those 2 bits
+        x = (x & 0x3333333333333333) + ((x >> 2) & 0x3333333333333333); // put count of each 4 bits into those 4 bits
+        x = (x + (x >> 4)) & 0x0f0f0f0f0f0f0f0f; // put count of each 8 bits into those 8 bits
+        return uint64(x * 0x0101010101010101) >> 56; // returns left 8 bits of x + (x<<8) + (x<<16) + (x<<24) + ...
     }
 }
