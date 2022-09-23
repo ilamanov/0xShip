@@ -23,7 +23,7 @@ contract RandomShooterGeneral is IGeneral {
         uint256, /* opponentsAttacks */
         uint256 myLastMove,
         uint256 opponentsLastMove,
-        uint64 /* opponentsDiscoveredFleet */
+        uint256 /* opponentsDiscoveredFleet */
     ) external pure returns (uint256) {
         // use number of empty cells as initial entropy for random cellToFire
         uint256 emptyCells = myAttacks.numberOfEmptyCells();

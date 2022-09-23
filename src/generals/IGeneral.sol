@@ -19,6 +19,6 @@ interface IGeneral {
         uint256 opponentsAttacks,
         uint256 myLastMove,
         uint256 opponentsLastMove,
-        uint64 opponentsDiscoveredFleet
+        uint256 opponentsDiscoveredFleet
     ) external returns (uint256);
 }

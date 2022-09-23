@@ -3,25 +3,25 @@ pragma solidity ^0.8.13;
 
 import "./Board.sol";
 
-error CoordsAreNotSorted(uint8 shipType);
-error NotRightSizeOrOrientation(uint8 shipType);
+error CoordsAreNotSorted(uint256 shipType);
+error NotRightSizeOrOrientation(uint256 shipType);
 
 /**
- * Fleet is packed into uint64. Bit layout:
+ * Board is represented using 256 bits, but only rightmost 64 bits are used. Bit layout of the 64 bits:
  * [4 empty bits | 6 bits: patrol start coord | 6 bits: patrol end coord | 6 bits: destroyer1 start coord | ...]
  * Each coord is 6 bits and it's an index into the 8x8 board, i.e. [0, 64)
  */
 library Fleet {
     // initializer for undiscovered fleet
-    uint64 internal constant EMPTY_FLEET = 0;
+    uint256 internal constant EMPTY_FLEET = 0;
 
     // ship types
-    uint8 internal constant EMPTY = 0;
-    uint8 internal constant PATROL = 1;
-    uint8 internal constant DESTROYER1 = 2;
-    uint8 internal constant DESTROYER2 = 3;
-    uint8 internal constant CARRIER = 4;
-    uint8 internal constant BATTLESHIP = 5;
+    uint256 internal constant EMPTY = 0;
+    uint256 internal constant PATROL = 1;
+    uint256 internal constant DESTROYER1 = 2;
+    uint256 internal constant DESTROYER2 = 3;
+    uint256 internal constant CARRIER = 4;
+    uint256 internal constant BATTLESHIP = 5;
 
     // ship sizes
     uint256 internal constant PATROL_LENGTH = 2;
@@ -30,33 +30,33 @@ library Fleet {
     uint256 internal constant CARRIER_WIDTH = 2;
     uint256 internal constant BATTLESHIP_LENGTH = 5;
 
-    function getCoordsStart(uint64 fleet, uint8 shipType)
+    function getCoordsStart(uint256 fleet, uint256 shipType)
         internal
         pure
-        returns (uint8)
+        returns (uint256)
     {
         // each ship takes up 2*6=12 bits. Need to shift right by
         // correct number of bits and take only the remaining 6 bits
         // cast to 8-bitm and mask out the initial 2 bits
-        return uint8(fleet >> (66 - (12 * shipType))) & 0x3F;
+        return (fleet >> (66 - (12 * shipType))) & 0x3F;
     }
 
-    function getCoordsEnd(uint64 fleet, uint8 shipType)
+    function getCoordsEnd(uint256 fleet, uint256 shipType)
         internal
         pure
-        returns (uint8)
+        returns (uint256)
     {
-        return uint8(fleet >> (60 - (12 * shipType))) & 0x3F;
+        return (fleet >> (60 - (12 * shipType))) & 0x3F;
     }
 
     // populate toFleet with the coords of shipType from fromFleet
     function copyShipTo(
-        uint64 fromFleet,
-        uint64 toFleet,
-        uint8 shipType
-    ) internal pure returns (uint64) {
-        uint8 shiftBy = 60 - 12 * shipType;
-        uint64 shipCoords = (fromFleet >> shiftBy) & 0xFFF; // shift and take last 12 bits
+        uint256 fromFleet,
+        uint256 toFleet,
+        uint256 shipType
+    ) internal pure returns (uint256) {
+        uint256 shiftBy = 60 - 12 * shipType;
+        uint256 shipCoords = (fromFleet >> shiftBy) & 0xFFF; // shift and take last 12 bits
         shipCoords <<= shiftBy; // shift back to its place
         return toFleet | shipCoords; // notice that toFleet is assumed to have all zeros
         // in the shipType's position, i.e. it does not manually clear out the bits
@@ -67,16 +67,16 @@ library Fleet {
     // This struct is only used to avoid stack too deep errors, use a struct to pack all vars into one var
     // https://medium.com/1milliondevs/compilererror-stack-too-deep-try-removing-local-variables-solved-a6bcecc16231
     struct Coords {
-        uint8 start;
-        uint8 end;
-        uint8 diff;
+        uint256 start;
+        uint256 end;
+        uint256 diff;
         uint256 horizontal;
         uint256 vertical;
     }
 
     // only used in Game.revealBoard to validate the fleet and store the board representation
     // of the fleet for faster lookup
-    function validateFleetAndConvertToBoard(uint64 fleet)
+    function validateFleetAndConvertToBoard(uint256 fleet)
         internal
         pure
         returns (uint256)

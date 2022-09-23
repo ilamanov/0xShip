@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-error CantWrapShip(uint8 shipType);
-error ShipCollidesOrTooClose(uint8 shipType);
+error CantWrapShip(uint256 shipType);
+error ShipCollidesOrTooClose(uint256 shipType);
 
 /**
  * Board is represented using 256 bits, but only rightmost 192 bits are used. Bit layout of the 192 bits:
@@ -28,15 +28,15 @@ library Board {
     // assumes startCoord < endCoord
     function placeShip(
         BuildData memory buildData,
-        uint8 startCoord,
-        uint8 endCoord,
-        uint8 shipType
+        uint256 startCoord,
+        uint256 endCoord,
+        uint256 shipType
     ) internal pure {
         // TODO is there a constant time bit operation that we can use instead of a loop in the function?
-        uint8 startY = startCoord >> 3; // divide by 8
-        uint8 endY = endCoord >> 3;
-        uint8 startX = startCoord % 8;
-        uint8 endX = endCoord % 8;
+        uint256 startY = startCoord >> 3; // divide by 8
+        uint256 endY = endCoord >> 3;
+        uint256 startX = startCoord % 8;
+        uint256 endX = endCoord % 8;
 
         if (startX > endX) revert CantWrapShip(shipType);
 
@@ -44,7 +44,7 @@ library Board {
         for (uint256 y = startY; y <= endY; y++) {
             for (uint256 x = startX; x <= endX; x++) {
                 uint256 cellIdx = (y << 3) + x;
-                uint256 mask = uint256(shipType) << (3 * cellIdx);
+                uint256 mask = shipType << (3 * cellIdx);
                 // multiply by 3 in the mask because each cell takes up 3 bits
                 ship |= mask;
             }
@@ -69,7 +69,7 @@ library Board {
         for (uint256 y = startY; y <= endY; y++) {
             for (uint256 x = startX; x <= endX; x++) {
                 uint256 cellIdx = (y << 3) + x;
-                uint256 mask = uint256(0x7) << (cellIdx * 3);
+                uint256 mask = 0x7 << (cellIdx * 3);
                 shipAndAdjacent |= mask;
             }
         }

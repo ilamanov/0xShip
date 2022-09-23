@@ -20,7 +20,7 @@ contract ConsecutiveShooterGeneral is IGeneral {
         uint256, /* opponentsAttacks */
         uint256 myLastMove,
         uint256, /* opponentsLastMove */
-        uint64 /* opponentsDiscoveredFleet */
+        uint256 /* opponentsDiscoveredFleet */
     ) external pure returns (uint256) {
         if (myLastMove == 255) {
             // game just started

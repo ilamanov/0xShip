@@ -228,9 +228,9 @@ contract Game {
         emit ChallengeWithdrawn(challengeHash, msg.sender);
     }
 
-    // fleet is represented using 64 bits. See Fleet library for the layout of bits
-    using Fleet for uint64;
-    // board is represented using 192 bits. See Board library for the layout of bits
+    // fleet uses 64 bits. See Fleet library for the layout of bits
+    using Fleet for uint256;
+    // board uses 192 bits. See Board library for the layout of bits
     using Board for uint256;
 
     struct FleetAndBoard {
@@ -243,16 +243,16 @@ contract Game {
 
     event FleetRevealed(
         uint96 indexed fleetHash,
-        uint64 indexed fleet,
+        uint256 indexed fleet,
         bytes32 salt
     );
 
     function revealFleetsAndStartBattle(
         uint96 fleetHash1,
-        uint64 fleet1,
+        uint256 fleet1,
         bytes32 salt1,
         uint96 fleetHash2,
-        uint64 fleet2,
+        uint256 fleet2,
         bytes32 salt2,
         bytes32 challengeHash,
         uint256 maxTurns,
@@ -265,7 +265,7 @@ contract Game {
 
     function revealFleet(
         uint96 fleetHash,
-        uint64 fleet,
+        uint256 fleet,
         bytes32 salt
     ) public {
         // In order to obfuscate the fleet that a player starts with from the opponent,
@@ -275,9 +275,11 @@ contract Game {
         // in order to prevent memoization of fleet, an optional salt can be used to make it harder
         // to reverse the hashing operation. salt can be any data.
 
+        uint64 fleet64 = uint64(fleet);
+
         if (
             fleetHash !=
-            uint96(uint256(keccak256(abi.encodePacked(fleet, salt))))
+            uint96(uint256(keccak256(abi.encodePacked(fleet64, salt))))
         ) revert InvalidFleetHash();
 
         // this function not only makes sure that the revealed fleet actually corresponds to the
@@ -286,7 +288,7 @@ contract Game {
         uint256 board = fleet.validateFleetAndConvertToBoard();
 
         // also store the board representation of the fleet for faster lookup
-        fleetsAndBoards[fleetHash] = FleetAndBoard(fleet, uint192(board));
+        fleetsAndBoards[fleetHash] = FleetAndBoard(fleet64, uint192(board));
 
         emit FleetRevealed(fleetHash, fleet, salt);
     }
@@ -306,12 +308,12 @@ contract Game {
         // The first 3 arrays are constant
         // TODO is it possible to shave off gas due to them being constant?
         IGeneral[2] generals;
-        uint64[2] fleets;
+        uint256[2] fleets;
         uint256[2] boards;
         // everything else is not constant
         uint256[2] attacks;
         uint256[2] lastMoves;
-        uint64[2] opponentsDiscoveredFleet;
+        uint256[2] opponentsDiscoveredFleet;
         uint256[5][2] remainingCells;
         uint256 currentPlayerIdx;
         uint256 otherPlayerIdx;
@@ -496,8 +498,8 @@ contract Game {
                 fleetsAndBoards[challenges[challengeHash].caller.fleetHash]
             ];
             initialGameState.fleets = [
-                fleetAndBoardsCached[0].fleet,
-                fleetAndBoardsCached[1].fleet
+                uint256(fleetAndBoardsCached[0].fleet),
+                uint256(fleetAndBoardsCached[1].fleet)
             ];
             initialGameState.boards = [
                 uint256(fleetAndBoardsCached[0].board),
