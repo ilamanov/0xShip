@@ -17,8 +17,8 @@ interface IGeneral {
         uint192 myBoard,
         uint192 myAttacks,
         uint192 opponentsAttacks,
-        uint8 myLastMove,
-        uint8 opponentsLastMove,
+        uint256 myLastMove,
+        uint256 opponentsLastMove,
         uint64 opponentsDiscoveredFleet
-    ) external returns (uint8);
+    ) external returns (uint256);
 }

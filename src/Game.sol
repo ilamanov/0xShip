@@ -310,21 +310,21 @@ contract Game {
         uint192[2] boards;
         // everything else is not constant
         uint192[2] attacks;
-        uint8[2] lastMoves;
+        uint256[2] lastMoves;
         uint64[2] opponentsDiscoveredFleet;
         uint256[5][2] remainingCells;
         uint256 currentPlayerIdx;
         uint256 otherPlayerIdx;
         uint256 winnerIdx;
         uint256 winReason;
-        uint8[] gameHistory;
+        uint256[] gameHistory;
     }
 
     event BattleConcluded(
         bytes32 indexed challengeHash,
         uint256 indexed winnerIdx,
         uint256 indexed winReason,
-        uint8[] gameHistory,
+        uint256[] gameHistory,
         uint256 maxTurns,
         address facilitatorFeeAddress
     );
@@ -346,8 +346,8 @@ contract Game {
 
         for (uint256 i = 0; i < maxTurns; i++) {
             gs.otherPlayerIdx = (gs.currentPlayerIdx + 1) % 2;
-            uint8 cellToFire;
 
+            uint256 cellToFire;
             try
                 gs.generals[gs.currentPlayerIdx].fire{gas: 4_000}(
                     gs.boards[gs.currentPlayerIdx],
@@ -357,7 +357,7 @@ contract Game {
                     gs.lastMoves[gs.otherPlayerIdx],
                     gs.opponentsDiscoveredFleet[gs.currentPlayerIdx]
                 )
-            returns (uint8 ret) {
+            returns (uint256 ret) {
                 cellToFire = ret;
             } catch {}
 
@@ -375,7 +375,7 @@ contract Game {
             if (
                 !gs.attacks[gs.currentPlayerIdx].isOfType(
                     Attacks.EMPTY,
-                    cellToFire
+                    uint8(cellToFire)
                 )
             ) {
                 gs.currentPlayerIdx = gs.otherPlayerIdx;
@@ -383,18 +383,18 @@ contract Game {
             }
 
             uint8 hitShipType = gs.boards[gs.otherPlayerIdx].getShipAt(
-                cellToFire
+                uint8(cellToFire)
             );
 
             if (hitShipType == Fleet.EMPTY) {
                 gs.attacks[gs.currentPlayerIdx] = gs
                     .attacks[gs.currentPlayerIdx]
-                    .markAs(Attacks.MISS, cellToFire);
+                    .markAs(Attacks.MISS, uint8(cellToFire));
             } else {
                 // it's a hit
                 gs.attacks[gs.currentPlayerIdx] = gs
                     .attacks[gs.currentPlayerIdx]
-                    .markAs(Attacks.HIT, cellToFire);
+                    .markAs(Attacks.HIT, uint8(cellToFire));
 
                 // decrement number of cells remaining for the hit ship
                 uint256 hitShipRemainingCells = --gs.remainingCells[
@@ -509,7 +509,7 @@ contract Game {
             Attacks.EMPTY_ATTACKS,
             Attacks.EMPTY_ATTACKS
         ];
-        initialGameState.lastMoves = [255, 255]; // initialize with 255 because 255 is an invalid move.
+        initialGameState.lastMoves = [uint256(255), uint256(255)]; // initialize with 255 because 255 is an invalid move.
         //                                        valid moves are indicies into the 8x8 board, i.e. [0, 64)
         initialGameState.opponentsDiscoveredFleet = [
             Fleet.EMPTY_FLEET,
@@ -541,10 +541,8 @@ contract Game {
 
         // used for emitting gameHistory in the event. first item in the history is the
         // idx of the first player to fire. The rest of the items are cells fired by players
-        initialGameState.gameHistory = new uint8[](maxTurns + 1);
-        initialGameState.gameHistory[0] = uint8(
-            initialGameState.currentPlayerIdx
-        );
+        initialGameState.gameHistory = new uint256[](maxTurns + 1);
+        initialGameState.gameHistory[0] = initialGameState.currentPlayerIdx;
     }
 
     function _getNumberOfDestroyedShips(

@@ -21,16 +21,14 @@ contract RandomShooterGeneral is IGeneral {
         uint192, /* myBoard */
         uint192 myAttacks,
         uint192, /* opponentsAttacks */
-        uint8 myLastMove,
-        uint8 opponentsLastMove,
+        uint256 myLastMove,
+        uint256 opponentsLastMove,
         uint64 /* opponentsDiscoveredFleet */
-    ) external pure returns (uint8) {
+    ) external pure returns (uint256) {
         // use number of empty cells as initial entropy for random cellToFire
         uint8 emptyCells = myAttacks.numberOfEmptyCells();
-        uint8 cellToFire = uint8(
-            uint256(
-                keccak256(abi.encode(emptyCells, myLastMove, opponentsLastMove))
-            )
+        uint256 cellToFire = uint256(
+            keccak256(abi.encode(emptyCells, myLastMove, opponentsLastMove))
         ) % 64;
 
         // if you want to avoid duplicates then uncomment next code, but it will run out of gas most of the time
