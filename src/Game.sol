@@ -292,7 +292,7 @@ contract Game {
     }
 
     // attacks are represented using 192 bits. See Attacks library for the layout of bits
-    using Attacks for uint192;
+    using Attacks for uint256;
 
     uint256 internal constant WIN_REASON_TKO_INVALID_MOVE = 1;
     uint256 internal constant WIN_REASON_ELIMINATED_OPPONENT = 2;
@@ -309,7 +309,7 @@ contract Game {
         uint64[2] fleets;
         uint256[2] boards;
         // everything else is not constant
-        uint192[2] attacks;
+        uint256[2] attacks;
         uint256[2] lastMoves;
         uint64[2] opponentsDiscoveredFleet;
         uint256[5][2] remainingCells;
@@ -375,7 +375,7 @@ contract Game {
             if (
                 !gs.attacks[gs.currentPlayerIdx].isOfType(
                     Attacks.EMPTY,
-                    uint8(cellToFire)
+                    cellToFire
                 )
             ) {
                 gs.currentPlayerIdx = gs.otherPlayerIdx;
@@ -389,12 +389,12 @@ contract Game {
             if (hitShipType == Fleet.EMPTY) {
                 gs.attacks[gs.currentPlayerIdx] = gs
                     .attacks[gs.currentPlayerIdx]
-                    .markAs(Attacks.MISS, uint8(cellToFire));
+                    .markAs(Attacks.MISS, cellToFire);
             } else {
                 // it's a hit
                 gs.attacks[gs.currentPlayerIdx] = gs
                     .attacks[gs.currentPlayerIdx]
-                    .markAs(Attacks.HIT, uint8(cellToFire));
+                    .markAs(Attacks.HIT, cellToFire);
 
                 // decrement number of cells remaining for the hit ship
                 uint256 hitShipRemainingCells = --gs.remainingCells[

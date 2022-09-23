@@ -5,7 +5,7 @@ import "./IGeneral.sol";
 import "../utils/Attacks.sol";
 
 contract RandomShooterGeneral is IGeneral {
-    using Attacks for uint192;
+    using Attacks for uint256;
 
     address private _owner;
 
@@ -19,14 +19,14 @@ contract RandomShooterGeneral is IGeneral {
 
     function fire(
         uint256, /* myBoard */
-        uint192 myAttacks,
-        uint192, /* opponentsAttacks */
+        uint256 myAttacks,
+        uint256, /* opponentsAttacks */
         uint256 myLastMove,
         uint256 opponentsLastMove,
         uint64 /* opponentsDiscoveredFleet */
     ) external pure returns (uint256) {
         // use number of empty cells as initial entropy for random cellToFire
-        uint8 emptyCells = myAttacks.numberOfEmptyCells();
+        uint256 emptyCells = myAttacks.numberOfEmptyCells();
         uint256 cellToFire = uint256(
             keccak256(abi.encode(emptyCells, myLastMove, opponentsLastMove))
         ) % 64;

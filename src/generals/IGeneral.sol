@@ -15,8 +15,8 @@ interface IGeneral {
     // the start and end coords =0
     function fire(
         uint256 myBoard,
-        uint192 myAttacks,
-        uint192 opponentsAttacks,
+        uint256 myAttacks,
+        uint256 opponentsAttacks,
         uint256 myLastMove,
         uint256 opponentsLastMove,
         uint64 opponentsDiscoveredFleet

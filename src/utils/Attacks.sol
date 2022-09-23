@@ -2,79 +2,80 @@
 pragma solidity ^0.8.13;
 
 /**
- * Attacks are represented using 192 bits. Bit layout:
+ * Attacks are represented using 256 bits but only use the rightmost 192 bits. Bit layout of the 192 bits:
  * [64 bits: whether a cell in untouched | 64 bits: whether a cell is a miss | 64 bits: whether a cell is a hit]
  * Each 64-bit piece has a layout like this:
  * [bit for 63rd cell | bit for 62nd cell | bit for 0th cell]
  */
 library Attacks {
     // initializer for new battle
-    uint192 internal constant EMPTY_ATTACKS = 0xFFFFFFFFFFFFFFFF << 128;
+    uint256 internal constant EMPTY_ATTACKS = 0xFFFFFFFFFFFFFFFF << 128;
 
-    uint8 internal constant EMPTY = 0;
-    uint8 internal constant MISS = 1;
-    uint8 internal constant HIT = 2;
+    uint256 internal constant EMPTY = 0;
+    uint256 internal constant MISS = 1;
+    uint256 internal constant HIT = 2;
 
     function isOfType(
-        uint192 attacks,
-        uint8 attackType,
-        uint8 cellIdx
+        uint256 attacks,
+        uint256 attackType,
+        uint256 cellIdx
     ) internal pure returns (bool) {
-        uint8 shiftBy = (64 * (2 - attackType)) + cellIdx;
+        uint256 shiftBy = (64 * (2 - attackType)) + cellIdx;
         return ((attacks >> shiftBy) & 0x1) == 1;
     }
 
     function markAs(
-        uint192 attacks,
-        uint8 attackType,
-        uint8 cellIdx
-    ) internal pure returns (uint192 updatedAttacks) {
-        uint64 oneMask = uint64(0x1 << cellIdx);
-        uint64 zeroMask = ~oneMask;
-        for (uint8 i = 0; i < 3; i++) {
-            uint8 shiftChunkBy = 64 * (2 - i);
-            uint64 chunk = uint64(attacks >> shiftChunkBy);
+        uint256 attacks,
+        uint256 attackType,
+        uint256 cellIdx
+    ) internal pure returns (uint256 updatedAttacks) {
+        uint256 oneMask = 0x1 << cellIdx;
+        uint256 zeroMask = (~oneMask) & 0xFFFFFFFFFFFFFFFF;
+        for (uint256 i = 0; i < 3; i++) {
+            uint256 shiftChunkBy = 64 * (2 - i);
+            uint256 chunk = (attacks >> shiftChunkBy) & 0xFFFFFFFFFFFFFFFF;
             if (i == attackType) {
                 chunk |= oneMask;
             } else {
                 chunk &= zeroMask;
             }
-            updatedAttacks |= (uint192(chunk) << shiftChunkBy);
+            updatedAttacks |= (chunk << shiftChunkBy);
         }
     }
 
-    function numberOfEmptyCells(uint192 attacks) internal pure returns (uint8) {
-        return hammingDistance64(uint64(attacks >> 128));
+    function numberOfEmptyCells(uint256 attacks)
+        internal
+        pure
+        returns (uint256)
+    {
+        return hammingDistance64((attacks >> 128) & 0xFFFFFFFFFFFFFFFF);
     }
 
-    function numberOfMisses(uint192 attacks) internal pure returns (uint8) {
-        return hammingDistance64(uint64(attacks >> 64));
+    function numberOfMisses(uint256 attacks) internal pure returns (uint256) {
+        return hammingDistance64((attacks >> 64) & 0xFFFFFFFFFFFFFFFF);
     }
 
-    function numberOfHits(uint192 attacks) internal pure returns (uint8) {
-        return hammingDistance64(uint64(attacks));
+    function numberOfHits(uint256 attacks) internal pure returns (uint256) {
+        return hammingDistance64(attacks & 0xFFFFFFFFFFFFFFFF);
     }
 
-    function hasWon(uint192 attacks) internal pure returns (bool) {
+    function hasWon(uint256 attacks) internal pure returns (bool) {
         return numberOfHits(attacks) == 21; // 21 is total number of cells occupied by ships
     }
 
-    function hammingDistance64(uint64 v)
+    function hammingDistance64(uint256 v)
         private
         pure
-        returns (uint8 countOfOnes)
+        returns (uint256 countOfOnes)
     {
         // TODO implement this for uint64
-        return
-            uint8(
-                hammingDistance32(v & 0xFFFFFFFF) + hammingDistance32(v >> 32)
-            );
+        return hammingDistance32(v & 0xFFFFFFFF) + hammingDistance32(v >> 32);
     }
 
-    function hammingDistance32(uint64 v)
+    function hammingDistance32(uint256 v)
         private
         pure
-        returns (uint64 countOfOnes)
+        returns (uint256 countOfOnes)
     {
         // See http://graphics.stanford.edu/~seander/bithacks.html (Counting bits set, in parallel section)
         // Also see https://stackoverflow.com/questions/14555607/number-of-bits-set-in-a-number
