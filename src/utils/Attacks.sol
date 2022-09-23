@@ -16,14 +16,17 @@ library Attacks {
     uint256 internal constant MISS = 1;
     uint256 internal constant HIT = 2;
 
+    // zero_mask is same as [...63 zeros ... 1 ... 63 zeros ... 1 ... 63 zeros ... 1]
+    uint256 private constant FIRST_CELL = 0x100000000000000010000000000000001;
+
     function isOfType(
         uint256 attacks,
         uint256 attackType,
         uint256 cellIdx
     ) internal pure returns (bool) {
+        // cell of interest is at shiftBy = attackType * 64 + cellIdx = (attackType << 6) + cellIdx
         // need to check whether attacks & (1 << shiftBy) is non-zero
-        // where shifyBy is (64 * attackType) + cellIdx
-        return (attacks & (1 << ((64 * attackType) + cellIdx))) > 0;
+        return (attacks & (1 << ((attackType << 6) + cellIdx))) > 0;
     }
 
     function markAs(
@@ -31,18 +34,11 @@ library Attacks {
         uint256 attackType,
         uint256 cellIdx
     ) internal pure returns (uint256 updatedAttacks) {
-        uint256 oneMask = 0x1 << cellIdx;
-        uint256 zeroMask = (~oneMask) & 0xFFFFFFFFFFFFFFFF;
-        for (uint256 i = 0; i < 3; i++) {
-            uint256 shiftChunkBy = 64 * i;
-            uint256 chunk = (attacks >> shiftChunkBy) & 0xFFFFFFFFFFFFFFFF;
-            if (i == attackType) {
-                chunk |= oneMask;
-            } else {
-                chunk &= zeroMask;
-            }
-            updatedAttacks |= (chunk << shiftChunkBy);
-        }
+        // zeroMask is for zeroing out all attackTypes for a given cell
+        uint256 zeroMask = ~(FIRST_CELL << cellIdx);
+        // oneMask is for setting bit at attackType to 1
+        uint256 oneMask = 1 << ((attackType << 6) + cellIdx);
+        return (attacks & zeroMask) | oneMask;
     }
 
     function numberOfEmptyCells(uint256 attacks)
@@ -65,13 +61,9 @@ library Attacks {
         return numberOfHits(attacks) == 21; // 21 is total number of cells occupied by ships
     }
 
-    function hammingDistance64(uint256 v)
-        internal
-        pure
-        returns (uint256 countOfOnes)
-    {
+    function hammingDistance64(uint256 x) internal pure returns (uint256) {
         // TODO implement this for uint64
-        return hammingDistance32(v & 0xFFFFFFFF) + hammingDistance32(v >> 32);
+        return hammingDistance32(x & 0xFFFFFFFF) + hammingDistance32(x >> 32);
     }
 
     function hammingDistance32(uint256 v)
