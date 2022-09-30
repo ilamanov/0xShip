@@ -128,6 +128,7 @@ contract GameTest is Test {
             }
         }
         // TODO test overlaps including the adjacency
+        // TODO Test that after each battle is concluded, balance of contract is zero
     }
 
     function _assertCoords(

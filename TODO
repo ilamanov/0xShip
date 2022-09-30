@@ -1,4 +1,0 @@
-- CancelDueToInvalidBoard penalizes the stupid 25%
-- What to do about not revealed board. Maybe TKO?
-- add function to withdrawDonationsETH, withdrawDonationsERC20 - probably need an "donationsAddress", "owner" (event for ownership transferred. maybe not. What is the purpose of events? Which ones are needed for the game. Does game care about ownership transfer?), etc Withdraw should only withdraw the extra. Not everything (will need getallchallenges)
-- Keep track of score/rating. Maybe don’t store score on-chain because it’s easily manipulatable

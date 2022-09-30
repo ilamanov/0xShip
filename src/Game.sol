@@ -120,7 +120,6 @@ contract Game {
     }
 
     modifier onlyOwnerOfGeneral(IGeneral general) {
-        // TODO is there a reentrancy attack possible because calling general.owner? probably don't provide pointer to Coordinator contract (and not only that but also explicitly guard against reentrancy because they can hardcode contract address)
         // check so players dont use other ppls code. Credit: 0xBeans
         if (general.owner() != msg.sender) revert NotYourGeneral();
         _;
@@ -174,7 +173,6 @@ contract Game {
 
         // lock the challenge by making caller non-null
         challenges[challengeHash].caller = gear;
-        // TODO what happens if at some point they change general.owner() function. Will my code break? check that any changes to the intenral logic of the General will not result in loss of bid etc. Once it's locked, then you can;t withdraw your ETH, not even by throwing errors in fire()
 
         emit ChallengeAccepted(
             challengeHash,
