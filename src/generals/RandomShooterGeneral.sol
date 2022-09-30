@@ -32,7 +32,7 @@ contract RandomShooterGeneral is IGeneral {
         ) % 64;
 
         // if you want to avoid duplicates then uncomment next code, but it will run out of gas most of the time
-        // while (!myAttacks.isOfType(Attacks.UNTOUCHED, cellToFire)) {
+        // while (!myAttacks.isOfType(cellToFire, Attacks.UNTOUCHED)) {
         //     cellToFire =
         //         uint8(
         //             uint256(

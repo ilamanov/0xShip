@@ -21,8 +21,8 @@ library Attacks {
 
     function isOfType(
         uint256 attacks,
-        uint256 attackType,
-        uint256 cellIdx
+        uint256 cellIdx,
+        uint256 attackType
     ) internal pure returns (bool) {
         // cell of interest is at shiftBy = attackType * 64 + cellIdx = (attackType << 6) + cellIdx
         // need to check whether attacks & (1 << shiftBy) is non-zero
@@ -31,8 +31,8 @@ library Attacks {
 
     function markAs(
         uint256 attacks,
-        uint256 attackType,
-        uint256 cellIdx
+        uint256 cellIdx,
+        uint256 attackType
     ) internal pure returns (uint256 updatedAttacks) {
         // zeroMask is for zeroing out all attackTypes for a given cell
         uint256 zeroMask = ~(FIRST_CELL << cellIdx);

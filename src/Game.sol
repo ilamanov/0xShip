@@ -10,8 +10,8 @@ error NotYourGeneral();
 error ChallengeAldreadyExists();
 error ChallengeAldreadyLocked();
 error ChallengeNeedsToBeLocked();
-error FleetsNeedToHaveBeenRevealed();
 error ChallengerDoesNotWantToPlayAgainstYou();
+error FleetsNeedToHaveBeenRevealed();
 error FaciliatorPercentageUnitsWrong();
 error NotEnoughEth();
 error InvalidFleetHash();
@@ -32,6 +32,43 @@ error InvalidMaxTurns();
  * opponents don't know each other's fleet before the battle begins).
  */
 contract Game {
+    // -------------------------------------------- EVENTS --------------------------------------------
+    event ChallengeSubmitted(
+        bytes32 indexed challengeHash,
+        uint256 indexed bidAmount,
+        address indexed general,
+        uint96 fleetHash,
+        uint96 facilitatorPercentage,
+        address preferredOpponent
+    );
+    event ChallengeAccepted(
+        bytes32 indexed challengeHash,
+        address indexed general,
+        uint96 fleetHash
+    );
+    event ChallengeModified(
+        bytes32 indexed challengeHash,
+        uint256 indexed bidAmount,
+        uint96 facilitatorPercentage,
+        address preferredOpponent
+    );
+    event ChallengeWithdrawn(bytes32 indexed challengeHash);
+    event FleetRevealed(
+        uint96 indexed fleetHash,
+        uint256 indexed fleet,
+        bytes32 salt
+    );
+    event BattleConcluded(
+        bytes32 indexed challengeHash,
+        uint256 indexed winnerIdx,
+        uint256 indexed winReason,
+        uint256[] gameHistory,
+        uint256 maxTurns,
+        address facilitatorFeeAddress
+    );
+
+    // ---------------- LOGIC FOR SUBMITTING/ACCEPTING/MODIFYING/WITHDRAWING CHALLENGES ----------------
+
     struct Challenge {
         Gear challenger; // initiator of the challenge
         Gear caller; // acceptor of the challenge
@@ -92,16 +129,6 @@ contract Game {
     // constant to scale uints into percentages (1e4 == 100%)
     uint96 private constant PERCENTAGE_SCALE = 1e4;
 
-    event ChallengeSubmitted(
-        bytes32 indexed challengeHash,
-        uint256 indexed bidAmount,
-        address indexed general,
-        uint96 fleetHash,
-        uint96 facilitatorPercentage,
-        address preferredOpponent,
-        address by
-    );
-
     function submitChallenge(
         Gear calldata gear,
         uint96 facilitatorPercentage,
@@ -126,17 +153,9 @@ contract Game {
             address(gear.general),
             gear.fleetHash,
             facilitatorPercentage,
-            address(preferredOpponent),
-            msg.sender
+            address(preferredOpponent)
         );
     }
-
-    event ChallengeAccepted(
-        bytes32 indexed challengeHash,
-        address indexed general,
-        uint96 fleetHash,
-        address by
-    );
 
     function acceptChallenge(Gear calldata gear, bytes32 challengeHash)
         external
@@ -160,18 +179,9 @@ contract Game {
         emit ChallengeAccepted(
             challengeHash,
             address(gear.general),
-            gear.fleetHash,
-            msg.sender
+            gear.fleetHash
         );
     }
-
-    event ChallengeModified(
-        bytes32 indexed challengeHash,
-        uint256 indexed bidAmount,
-        uint96 facilitatorPercentage,
-        address preferredOpponent,
-        address by
-    );
 
     function modifyChallenge(
         Gear calldata oldGear,
@@ -201,12 +211,9 @@ contract Game {
             challengeHash,
             newBidAmount,
             newFacilitatorPercentage,
-            address(newPreferredOpponent),
-            msg.sender
+            address(newPreferredOpponent)
         );
     }
-
-    event ChallengeWithdrawn(bytes32 indexed challengeHash, address by);
 
     function withdrawChallenge(Gear calldata gear)
         external
@@ -225,8 +232,10 @@ contract Game {
         // but no ETH is involved
         delete challenges[challengeHash].preferredOpponent;
 
-        emit ChallengeWithdrawn(challengeHash, msg.sender);
+        emit ChallengeWithdrawn(challengeHash);
     }
+
+    // -------------------------------------- LOGIC FOR REVEALING FLEET --------------------------------------
 
     // fleet uses 64 bits. See Fleet library for the layout of bits
     using Fleet for uint256;
@@ -234,18 +243,13 @@ contract Game {
     using Board for uint256;
 
     struct FleetAndBoard {
+        // in storage we only store what's necessary in order to bit-pack
         uint64 fleet;
         uint192 board;
     }
 
     // fleetHash to FleetAndBoard
     mapping(uint96 => FleetAndBoard) public fleetsAndBoards;
-
-    event FleetRevealed(
-        uint96 indexed fleetHash,
-        uint256 indexed fleet,
-        bytes32 salt
-    );
 
     function revealFleetsAndStartBattle(
         uint96 fleetHash1,
@@ -269,11 +273,12 @@ contract Game {
         bytes32 salt
     ) public {
         // In order to obfuscate the fleet that a player starts with from the opponent,
-        // we use fleetHash when commiting a/to Challenge. This phase allows you to "reveal your hand",
-        // since the game is locked at this point, nothing can be changed about it.
+        // we use fleetHash when commiting a/to Challenge.
+        // After the challenge is accepted, the game is locked. Nothing can be changed about it.
+        // So, now it's safe to reveal the fleet
 
-        // in order to prevent memoization of fleet, an optional salt can be used to make it harder
-        // to reverse the hashing operation. salt can be any data.
+        // in order to prevent memoization of fleet (rainbow attack), an optional salt can be
+        // used to make it harder to reverse the hashing operation. salt can be any data.
 
         if (
             fleetHash !=
@@ -294,6 +299,8 @@ contract Game {
         emit FleetRevealed(fleetHash, fleet, salt);
     }
 
+    // ------------------------------------ LOGIC FOR PLAYING THE GAME ------------------------------------
+
     // attacks are represented using 192 bits. See Attacks library for the layout of bits
     using Attacks for uint256;
 
@@ -303,7 +310,7 @@ contract Game {
     uint256 internal constant DRAW = 5;
     uint256 internal constant NO_WINNER = 5;
 
-    // To avoid stack too deep errors, use a struct to pack all vars into one var
+    // To avoid stack too deep errors, use a struct to pack all game vars into one var
     // https://medium.com/1milliondevs/compilererror-stack-too-deep-try-removing-local-variables-solved-a6bcecc16231
     struct GameState {
         // The first 3 arrays are constant
@@ -323,15 +330,6 @@ contract Game {
         uint256[] gameHistory;
     }
 
-    event BattleConcluded(
-        bytes32 indexed challengeHash,
-        uint256 indexed winnerIdx,
-        uint256 indexed winReason,
-        uint256[] gameHistory,
-        uint256 maxTurns,
-        address facilitatorFeeAddress
-    );
-
     function startBattle(
         bytes32 challengeHash,
         uint256 maxTurns,
@@ -344,7 +342,7 @@ contract Game {
         if (gs.fleets[0] == 0 || gs.fleets[1] == 0)
             revert FleetsNeedToHaveBeenRevealed();
         if (
-            ((maxTurns % 2) != 0) || (maxTurns < 21) // // the least amount of moves to win the game
+            ((maxTurns % 2) != 0) || (maxTurns < 21) // 21 is the least amount of moves to win the game
         ) revert InvalidMaxTurns();
 
         uint256 i;
@@ -372,15 +370,15 @@ contract Game {
                 // if a general outputs a non-valid move, it's a TKO
                 gs.winnerIdx = gs.otherPlayerIdx;
                 gs.winReason = WIN_REASON_TKO_INVALID_MOVE;
-                gs.gameHistory[i + 2] = 255;
+                gs.gameHistory[i + 2] = 255; // 255 marks the end of the game
                 break;
             }
 
             // duplicate moves are ok
             if (
                 !gs.attacks[gs.currentPlayerIdx].isOfType(
-                    Attacks.UNTOUCHED,
-                    cellToFire
+                    cellToFire,
+                    Attacks.UNTOUCHED
                 )
             ) {
                 gs.currentPlayerIdx = gs.otherPlayerIdx;
@@ -394,12 +392,12 @@ contract Game {
             if (hitShipType == Fleet.EMPTY) {
                 gs.attacks[gs.currentPlayerIdx] = gs
                     .attacks[gs.currentPlayerIdx]
-                    .markAs(Attacks.MISS, cellToFire);
+                    .markAs(cellToFire, Attacks.MISS);
             } else {
                 // it's a hit
                 gs.attacks[gs.currentPlayerIdx] = gs
                     .attacks[gs.currentPlayerIdx]
-                    .markAs(Attacks.HIT, cellToFire);
+                    .markAs(cellToFire, Attacks.HIT);
 
                 // decrement number of cells remaining for the hit ship
                 uint256 hitShipRemainingCells = --gs.remainingCells[
@@ -473,7 +471,7 @@ contract Game {
         }
 
         // after game is played the challenge becomes a "public good". Anyone can accept the
-        // challenge again and play for free
+        // challenge again and play for free (for free because we set bidAmount=0)
         delete challenges[challengeHash].caller;
         delete challenges[challengeHash].preferredOpponent;
 
@@ -516,7 +514,7 @@ contract Game {
             Attacks.EMPTY_ATTACKS,
             Attacks.EMPTY_ATTACKS
         ];
-        initialGameState.lastMoves = [uint256(255), uint256(255)]; // initialize with 255 because 255 is an invalid move.
+        initialGameState.lastMoves = [uint256(255), uint256(255)]; // initialize with 255 which indicates start of the game.
         //                                        valid moves are indicies into the 8x8 board, i.e. [0, 64)
         initialGameState.opponentsDiscoveredFleet = [
             Fleet.EMPTY_FLEET,
@@ -539,7 +537,7 @@ contract Game {
             ]
         ];
 
-        // need to randomly choose first general to start firing
+        // need to randomly choose first general to start firing.
         // use the timestamp as random input
         initialGameState.currentPlayerIdx = uint256(block.timestamp) % 2;
 
@@ -547,7 +545,8 @@ contract Game {
         initialGameState.winReason = DRAW;
 
         // used for emitting gameHistory in the event. first item in the history is the
-        // idx of the first player to fire. Last item is 255, The rest of the items are cells fired by players
+        // idx of the first player to fire. Last item is 255 which indicates end of game.
+        // the rest of the items are cells fired by players
         initialGameState.gameHistory = new uint256[](maxTurns + 2);
         initialGameState.gameHistory[0] = initialGameState.currentPlayerIdx;
     }
@@ -563,3 +562,5 @@ contract Game {
         }
     }
 }
+
+// - https://twitter.com/emo_eth/status/1574434812005228547?s=46&t=I2COHNlH8ZJ9IXr4Et-mGw
