@@ -51,9 +51,9 @@ contract Game {
     }
 
     // challengeHash to Challenge
-    mapping(bytes32 => Challenge) private challenges;
+    mapping(bytes32 => Challenge) public challenges;
     // all challengeHashes
-    bytes32[] private challengeHashes;
+    bytes32[] public challengeHashes;
 
     function getAllChallenges()
         external
@@ -347,7 +347,8 @@ contract Game {
             ((maxTurns % 2) != 0) || (maxTurns < 21) // // the least amount of moves to win the game
         ) revert InvalidMaxTurns();
 
-        for (uint256 i = 0; i < maxTurns; i++) {
+        uint256 i;
+        for (; i < maxTurns; i++) {
             gs.otherPlayerIdx = (gs.currentPlayerIdx + 1) % 2;
 
             uint256 cellToFire;
@@ -371,6 +372,7 @@ contract Game {
                 // if a general outputs a non-valid move, it's a TKO
                 gs.winnerIdx = gs.otherPlayerIdx;
                 gs.winReason = WIN_REASON_TKO_INVALID_MOVE;
+                gs.gameHistory[i + 2] = 255;
                 break;
             }
 
@@ -410,6 +412,7 @@ contract Game {
                     if (gs.attacks[gs.currentPlayerIdx].hasWon()) {
                         gs.winnerIdx = gs.currentPlayerIdx;
                         gs.winReason = WIN_REASON_ELIMINATED_OPPONENT;
+                        gs.gameHistory[i + 2] = 255;
                         break;
                     }
 
@@ -427,6 +430,7 @@ contract Game {
 
         if (gs.winnerIdx == NO_WINNER) {
             // game terminated due to maxTotalTurns
+            gs.gameHistory[i + 1] = 255;
 
             uint256 numberOfShipDestroyed0 = _getNumberOfDestroyedShips(
                 gs.remainingCells,
@@ -447,7 +451,7 @@ contract Game {
         }
 
         // Distribute the proceeds
-        uint256 amountToSplit = challenges[challengeHash].bidAmount;
+        uint256 amountToSplit = 2 * challenges[challengeHash].bidAmount;
 
         if (amountToSplit > 0) {
             uint256 facilitatorFee = (amountToSplit *
@@ -543,8 +547,8 @@ contract Game {
         initialGameState.winReason = DRAW;
 
         // used for emitting gameHistory in the event. first item in the history is the
-        // idx of the first player to fire. The rest of the items are cells fired by players
-        initialGameState.gameHistory = new uint256[](maxTurns + 1);
+        // idx of the first player to fire. Last item is 255, The rest of the items are cells fired by players
+        initialGameState.gameHistory = new uint256[](maxTurns + 2);
         initialGameState.gameHistory[0] = initialGameState.currentPlayerIdx;
     }
 
