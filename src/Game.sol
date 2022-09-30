@@ -560,5 +560,3 @@ contract Game {
         }
     }
 }
-
-// - https://twitter.com/emo_eth/status/1574434812005228547?s=46&t=I2COHNlH8ZJ9IXr4Et-mGw
