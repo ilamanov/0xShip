@@ -7,6 +7,7 @@ import "./utils/Fleet.sol";
 import "./utils/Board.sol";
 
 error NotYourGeneral();
+error ChallengeDoesNotExist();
 error ChallengeAldreadyExists();
 error ChallengeAldreadyLocked();
 error ChallengeNeedsToBeLocked();
@@ -161,6 +162,8 @@ contract Game {
         payable
         onlyOwnerOfGeneral(gear.general)
     {
+        if (address(challenges[challengeHash].caller.general) != address(0))
+            revert ChallengeAldreadyLocked();
         IGeneral preferredOpponent = challenges[challengeHash]
             .preferredOpponent;
         if (
@@ -188,6 +191,8 @@ contract Game {
         IGeneral newPreferredOpponent
     ) external payable onlyOwnerOfGeneral(oldGear.general) {
         bytes32 challengeHash = _hashChallenge(oldGear);
+        if (address(challenges[challengeHash].challenger.general) == address(0))
+            revert ChallengeDoesNotExist();
         if (address(challenges[challengeHash].caller.general) != address(0))
             revert ChallengeAldreadyLocked();
         if (newFacilitatorPercentage > PERCENTAGE_SCALE)
