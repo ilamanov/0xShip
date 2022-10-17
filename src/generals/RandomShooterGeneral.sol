@@ -13,7 +13,11 @@ contract RandomShooterGeneral is IGeneral {
         _owner = msg.sender;
     }
 
-    function owner() external view returns (address) {
+    function name() external pure override returns (string memory) {
+        return "random-shooter";
+    }
+
+    function owner() external view override returns (address) {
         return _owner;
     }
 
@@ -24,7 +28,7 @@ contract RandomShooterGeneral is IGeneral {
         uint256 myLastMove,
         uint256 opponentsLastMove,
         uint256 /* opponentsDiscoveredFleet */
-    ) external pure returns (uint256) {
+    ) external pure override returns (uint256) {
         // use number of empty cells as initial entropy for random cellToFire
         uint256 emptyCells = myAttacks.numberOfEmptyCells();
         uint256 cellToFire = uint256(

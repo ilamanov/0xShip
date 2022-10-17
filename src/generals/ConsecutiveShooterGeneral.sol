@@ -10,7 +10,11 @@ contract ConsecutiveShooterGeneral is IGeneral {
         _owner = msg.sender;
     }
 
-    function owner() external view returns (address) {
+    function name() external pure override returns (string memory) {
+        return "straight-shooter";
+    }
+
+    function owner() external view override returns (address) {
         return _owner;
     }
 
@@ -21,7 +25,7 @@ contract ConsecutiveShooterGeneral is IGeneral {
         uint256 myLastMove,
         uint256, /* opponentsLastMove */
         uint256 /* opponentsDiscoveredFleet */
-    ) external pure returns (uint256) {
+    ) external pure override returns (uint256) {
         if (myLastMove == 255) {
             // game just started
             return 0;

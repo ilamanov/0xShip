@@ -2,6 +2,9 @@
 pragma solidity ^0.8.13;
 
 interface IGeneral {
+    // nickname of your general
+    function name() external view returns (string memory);
+
     // must be the address you will be calling the Game contract from.
     // this value is to check that no one else is using your code to play. credit: 0xBeans
     function owner() external view returns (address);
