@@ -1,22 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
+import "./IGame.sol";
 import "./generals/IGeneral.sol";
 import "./utils/Attacks.sol";
 import "./utils/Fleet.sol";
 import "./utils/Board.sol";
-
-error NotYourGeneral();
-error ChallengeDoesNotExist();
-error ChallengeAldreadyExists();
-error ChallengeAldreadyLocked();
-error ChallengeNeedsToBeLocked();
-error ChallengerDoesNotWantToPlayAgainstYou();
-error FleetsNeedToHaveBeenRevealed();
-error FaciliatorPercentageUnitsWrong();
-error NotEnoughEth();
-error InvalidFleetHash();
-error InvalidMaxTurns();
 
 /**
  * @title 0xShip: On-Chain Battleship Game
@@ -32,42 +21,7 @@ error InvalidMaxTurns();
  * fleet is obfuscated initially by providing only the hash of the fleet. This is so that
  * opponents don't know each other's fleet before the battle begins).
  */
-contract Game {
-    // -------------------------------------------- EVENTS --------------------------------------------
-    event ChallengeSubmitted(
-        bytes32 indexed challengeHash,
-        uint256 indexed bidAmount,
-        address indexed general,
-        uint96 fleetHash,
-        uint96 facilitatorPercentage,
-        address preferredOpponent
-    );
-    event ChallengeAccepted(
-        bytes32 indexed challengeHash,
-        address indexed general,
-        uint96 fleetHash
-    );
-    event ChallengeModified(
-        bytes32 indexed challengeHash,
-        uint256 indexed bidAmount,
-        uint96 facilitatorPercentage,
-        address preferredOpponent
-    );
-    event ChallengeWithdrawn(bytes32 indexed challengeHash);
-    event FleetRevealed(
-        uint96 indexed fleetHash,
-        uint256 indexed fleet,
-        bytes32 salt
-    );
-    event BattleConcluded(
-        bytes32 indexed challengeHash,
-        uint256 indexed winnerIdx,
-        uint256 indexed winReason,
-        uint256[] gameHistory,
-        uint256 maxTurns,
-        address facilitatorFeeAddress
-    );
-
+contract Game is IGame {
     // ---------------- LOGIC FOR SUBMITTING/ACCEPTING/MODIFYING/WITHDRAWING CHALLENGES ----------------
 
     struct Challenge {
@@ -104,7 +58,7 @@ contract Game {
         }
     }
 
-    function _hashChallenge(Gear calldata challengerGear)
+    function _hashChallenge(Gear memory challengerGear)
         private
         pure
         returns (bytes32)
@@ -162,8 +116,11 @@ contract Game {
         payable
         onlyOwnerOfGeneral(gear.general)
     {
+        if (address(challenges[challengeHash].challenger.general) == address(0))
+            revert ChallengeDoesNotExist();
         if (address(challenges[challengeHash].caller.general) != address(0))
             revert ChallengeAldreadyLocked();
+
         IGeneral preferredOpponent = challenges[challengeHash]
             .preferredOpponent;
         if (
@@ -471,12 +428,18 @@ contract Game {
                 );
             }
             challenges[challengeHash].bidAmount = 0;
+            challenges[challengeHash].facilitatorPercentage = 0;
         }
 
         // after game is played the challenge becomes a "public good". Anyone can accept the
         // challenge again and play for free (for free because we set bidAmount=0)
         delete challenges[challengeHash].caller;
         delete challenges[challengeHash].preferredOpponent;
+
+        // we also add a "free" mirror challenge
+        Gear storage callerGear = challenges[challengeHash].caller;
+        challenges[_hashChallenge(callerGear)].challenger = callerGear;
+        challengeHashes.push(challengeHash);
 
         emit BattleConcluded(
             challengeHash,
