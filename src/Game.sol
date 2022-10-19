@@ -412,37 +412,41 @@ contract Game is IGame {
         }
 
         // Distribute the proceeds
-        uint256 amountToSplit = 2 * gs.bidAmount;
+        {
+            uint256 amountToSplit = 2 * gs.bidAmount;
 
-        if (amountToSplit > 0) {
-            uint256 facilitatorFee = (amountToSplit *
-                gs.facilitatorPercentage) / PERCENTAGE_SCALE;
-            payable(facilitatorFeeAddress).transfer(facilitatorFee);
+            if (amountToSplit > 0) {
+                uint256 facilitatorFee = (amountToSplit *
+                    gs.facilitatorPercentage) / PERCENTAGE_SCALE;
+                payable(facilitatorFeeAddress).transfer(facilitatorFee);
 
-            if (gs.winnerIdx == NO_WINNER) {
-                amountToSplit = (amountToSplit - facilitatorFee) / 2;
-                payable(gs.generals[0].owner()).transfer(amountToSplit);
-                payable(gs.generals[1].owner()).transfer(amountToSplit);
-            } else {
-                amountToSplit -= facilitatorFee;
-                payable(gs.generals[gs.winnerIdx].owner()).transfer(
-                    amountToSplit
-                );
+                if (gs.winnerIdx == NO_WINNER) {
+                    amountToSplit = (amountToSplit - facilitatorFee) / 2;
+                    payable(gs.generals[0].owner()).transfer(amountToSplit);
+                    payable(gs.generals[1].owner()).transfer(amountToSplit);
+                } else {
+                    amountToSplit -= facilitatorFee;
+                    payable(gs.generals[gs.winnerIdx].owner()).transfer(
+                        amountToSplit
+                    );
+                }
+                delete challenges[challengeHash].bidAmount;
             }
-            delete challenges[challengeHash].bidAmount;
         }
 
-        // after game is played the challenge becomes a "public good". Anyone can accept the
-        // challenge again and play for free (for free because we set bidAmount=0).
-        // we also add a "free" mirror challenge
-        Gear storage callerGear = challenges[challengeHash].caller;
-        bytes32 newChallengeHash = _hashChallenge(callerGear);
-        challenges[newChallengeHash].challenger = callerGear;
-        challengeHashes.push(newChallengeHash);
+        {
+            // after game is played the challenge becomes a "public good". Anyone can accept the
+            // challenge again and play for free (for free because we set bidAmount=0).
+            // we also add a "free" mirror challenge
+            Gear storage callerGear = challenges[challengeHash].caller;
+            bytes32 newChallengeHash = _hashChallenge(callerGear);
+            challenges[newChallengeHash].challenger = callerGear;
+            challengeHashes.push(newChallengeHash);
 
-        delete challenges[challengeHash].caller;
-        delete challenges[challengeHash].preferredOpponent;
-        delete challenges[challengeHash].facilitatorPercentage;
+            delete challenges[challengeHash].caller;
+            delete challenges[challengeHash].preferredOpponent;
+            delete challenges[challengeHash].facilitatorPercentage;
+        }
 
         emit BattleConcluded(
             challengeHash,
