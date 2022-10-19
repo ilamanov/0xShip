@@ -274,11 +274,13 @@ contract Game is IGame {
     // To avoid stack too deep errors, use a struct to pack all game vars into one var
     // https://medium.com/1milliondevs/compilererror-stack-too-deep-try-removing-local-variables-solved-a6bcecc16231
     struct GameState {
-        // The first 3 arrays are constant
+        // The first 5 fields are constant
         // TODO is it possible to shave off gas due to them being constant?
         IGeneral[2] generals;
         uint256[2] fleets;
         uint256[2] boards;
+        uint256 bidAmount;
+        uint256 facilitatorPercentage;
         // everything else is not constant
         uint256[2] attacks;
         uint256[2] lastMoves;
@@ -410,15 +412,11 @@ contract Game is IGame {
         }
 
         // Distribute the proceeds
-        uint256 bidAmount = challenges[challengeHash].bidAmount;
-        uint256 facilitatorPercentage = challenges[challengeHash]
-            .facilitatorPercentage;
-
-        uint256 amountToSplit = 2 * bidAmount;
+        uint256 amountToSplit = 2 * gs.bidAmount;
 
         if (amountToSplit > 0) {
-            uint256 facilitatorFee = (amountToSplit * facilitatorPercentage) /
-                PERCENTAGE_SCALE;
+            uint256 facilitatorFee = (amountToSplit *
+                gs.facilitatorPercentage) / PERCENTAGE_SCALE;
             payable(facilitatorFeeAddress).transfer(facilitatorFee);
 
             if (gs.winnerIdx == NO_WINNER) {
@@ -452,8 +450,8 @@ contract Game is IGame {
             address(gs.generals[1]),
             gs.boards[0],
             gs.boards[1],
-            bidAmount,
-            facilitatorPercentage,
+            gs.bidAmount,
+            gs.facilitatorPercentage,
             gs.winnerIdx,
             gs.winReason,
             gs.gameHistory,
@@ -486,6 +484,10 @@ contract Game is IGame {
                 uint256(fleetAndBoardsCached[1].board)
             ];
         }
+
+        initialGameState.bidAmount = challenges[challengeHash].bidAmount;
+        initialGameState.facilitatorPercentage = challenges[challengeHash]
+            .facilitatorPercentage;
 
         initialGameState.attacks = [
             Attacks.EMPTY_ATTACKS,
