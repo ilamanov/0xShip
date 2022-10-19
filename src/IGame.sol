@@ -41,8 +41,14 @@ interface IGame {
     );
     event BattleConcluded(
         bytes32 indexed challengeHash,
-        uint256 indexed winnerIdx,
-        uint256 indexed winReason,
+        address indexed challengerGeneral,
+        address indexed callerGeneral,
+        uint256 challengerBoard,
+        uint256 callerBoard,
+        uint256 bidAmount,
+        uint256 facilitatorPercentage,
+        uint256 winnerIdx,
+        uint256 winReason,
         uint256[] gameHistory,
         uint256 maxTurns,
         address facilitatorFeeAddress

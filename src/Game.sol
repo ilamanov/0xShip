@@ -190,6 +190,7 @@ contract Game is IGame {
 
         // challenge now becomes a "public good": anyone can play against it
         // but no ETH is involved
+        delete challenges[challengeHash].facilitatorPercentage;
         delete challenges[challengeHash].preferredOpponent;
 
         emit ChallengeWithdrawn(challengeHash);
@@ -409,11 +410,14 @@ contract Game is IGame {
         }
 
         // Distribute the proceeds
-        uint256 amountToSplit = 2 * challenges[challengeHash].bidAmount;
+        uint256 bidAmount = challenges[challengeHash].bidAmount;
+        uint256 facilitatorPercentage = challenges[challengeHash]
+            .facilitatorPercentage;
+
+        uint256 amountToSplit = 2 * bidAmount;
 
         if (amountToSplit > 0) {
-            uint256 facilitatorFee = (amountToSplit *
-                challenges[challengeHash].facilitatorPercentage) /
+            uint256 facilitatorFee = (amountToSplit * facilitatorPercentage) /
                 PERCENTAGE_SCALE;
             payable(facilitatorFeeAddress).transfer(facilitatorFee);
 
@@ -427,22 +431,29 @@ contract Game is IGame {
                     amountToSplit
                 );
             }
-            challenges[challengeHash].bidAmount = 0;
-            challenges[challengeHash].facilitatorPercentage = 0;
+            delete challenges[challengeHash].bidAmount;
         }
 
         // after game is played the challenge becomes a "public good". Anyone can accept the
-        // challenge again and play for free (for free because we set bidAmount=0)
-        delete challenges[challengeHash].caller;
-        delete challenges[challengeHash].preferredOpponent;
-
+        // challenge again and play for free (for free because we set bidAmount=0).
         // we also add a "free" mirror challenge
         Gear storage callerGear = challenges[challengeHash].caller;
-        challenges[_hashChallenge(callerGear)].challenger = callerGear;
-        challengeHashes.push(challengeHash);
+        bytes32 newChallengeHash = _hashChallenge(callerGear);
+        challenges[newChallengeHash].challenger = callerGear;
+        challengeHashes.push(newChallengeHash);
+
+        delete challenges[challengeHash].caller;
+        delete challenges[challengeHash].preferredOpponent;
+        delete challenges[challengeHash].facilitatorPercentage;
 
         emit BattleConcluded(
             challengeHash,
+            address(gs.generals[0]),
+            address(gs.generals[1]),
+            gs.boards[0],
+            gs.boards[1],
+            bidAmount,
+            facilitatorPercentage,
             gs.winnerIdx,
             gs.winReason,
             gs.gameHistory,
