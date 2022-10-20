@@ -4,8 +4,9 @@ pragma solidity ^0.8.13;
 import "forge-std/Test.sol";
 import "../src/Game.sol";
 import "../src/generals/IGeneral.sol";
-import "../src/generals/RandomShooterGeneral.sol";
-import "../src/generals/ConsecutiveShooterGeneral.sol";
+import "../src/generals/RandomGeneral.sol";
+import "../src/generals/SweeperGeneral.sol";
+import "../src/generals/HunterGeneral.sol";
 import "../src/utils/Fleet.sol";
 
 contract BattleTest is Test {
@@ -49,8 +50,8 @@ contract BattleTest is Test {
 
     function setUp() public {
         game = new Game();
-        general1 = new RandomShooterGeneral();
-        general2 = new ConsecutiveShooterGeneral();
+        general1 = new HunterGeneral();
+        general2 = new SweeperGeneral();
         _submitChallenge();
         _acceptChallenge();
     }

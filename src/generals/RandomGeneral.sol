@@ -4,7 +4,7 @@ pragma solidity ^0.8.13;
 import "./IGeneral.sol";
 import "../utils/Attacks.sol";
 
-contract RandomShooterGeneral is IGeneral {
+contract RandomGeneral is IGeneral {
     using Attacks for uint256;
 
     address private _owner;
@@ -14,7 +14,7 @@ contract RandomShooterGeneral is IGeneral {
     }
 
     function name() external pure override returns (string memory) {
-        return "random-shooter";
+        return "random";
     }
 
     function owner() external view override returns (address) {

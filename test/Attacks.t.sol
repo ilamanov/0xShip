@@ -2,7 +2,6 @@
 pragma solidity ^0.8.13;
 
 import "forge-std/Test.sol";
-import "../src/generals/ConsecutiveShooterGeneral.sol";
 import "../src/utils/Attacks.sol";
 
 contract AttacksTest is Test {

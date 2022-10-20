@@ -3,7 +3,7 @@ pragma solidity ^0.8.13;
 
 import "./IGeneral.sol";
 
-contract ConsecutiveShooterGeneral is IGeneral {
+contract SweeperGeneral is IGeneral {
     address private _owner;
 
     constructor() {
@@ -11,7 +11,7 @@ contract ConsecutiveShooterGeneral is IGeneral {
     }
 
     function name() external pure override returns (string memory) {
-        return "straight-shooter";
+        return "sweeper";
     }
 
     function owner() external view override returns (address) {

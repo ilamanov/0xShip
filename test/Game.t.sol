@@ -4,7 +4,7 @@ pragma solidity ^0.8.13;
 import "forge-std/Test.sol";
 import "../src/Game.sol";
 import "../src/generals/IGeneral.sol";
-import "../src/generals/RandomShooterGeneral.sol";
+import "../src/generals/RandomGeneral.sol";
 import "../src/utils/Fleet.sol";
 import "../src/utils/Board.sol";
 
@@ -50,8 +50,8 @@ contract GameTest is Test {
 
     function setUp() public {
         game = new Game();
-        general1 = new RandomShooterGeneral();
-        general2 = new RandomShooterGeneral();
+        general1 = new RandomGeneral();
+        general2 = new RandomGeneral();
     }
 
     function testSubmitChallenge() public {
