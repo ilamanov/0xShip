@@ -52,35 +52,84 @@ contract HunterGeneral is IGeneral {
             return cellToFire;
         }
         // otherwise it was a hit, so choose an adjacent cell to fire
-        int256 y = int256(myLastMove >> 3);
-        int256 x = int256(myLastMove % 8);
+        uint256 y = myLastMove >> 3;
+        uint256 x = myLastMove % 8;
 
-        int256 cellToFire;
-        do {
-            uint256 random = uint256(
-                keccak256(abi.encode(cellToFire, myLastMove, opponentsLastMove))
-            );
-            int256 dy = int256(random % 3);
-            int256 dx = int256((random >> 2) % 3);
-            if (y == 0) {
-                dy = dy % 2;
-            } else if (y == 7) {
-                dy = -(dy % 2);
-            } else {
-                dy -= 1;
+        // if (y > 0 && x > 0) {
+        //     uint256 candidate = myLastMove - 9;
+        //     if (myAttacks.isOfType(candidate, Attacks.UNTOUCHED)) {
+        //         return candidate;
+        //     }
+        // }
+        if (y > 0) {
+            uint256 candidate = myLastMove - 8;
+            if (myAttacks.isOfType(candidate, Attacks.UNTOUCHED)) {
+                return candidate;
             }
-            if (x == 0) {
-                dx = dx % 2;
-            } else if (x == 7) {
-                dx = -(dx % 2);
-            } else {
-                dx -= 1;
+        }
+        // if (y > 0 && x < 8) {
+        //     uint256 candidate = myLastMove - 7;
+        //     if (myAttacks.isOfType(candidate, Attacks.UNTOUCHED)) {
+        //         return candidate;
+        //     }
+        // }
+        if (x > 0) {
+            uint256 candidate = myLastMove - 1;
+            if (myAttacks.isOfType(candidate, Attacks.UNTOUCHED)) {
+                return candidate;
             }
+        }
+        if (x < 8) {
+            uint256 candidate = myLastMove + 1;
+            if (myAttacks.isOfType(candidate, Attacks.UNTOUCHED)) {
+                return candidate;
+            }
+        }
+        // if (x > 0 && y < 8) {
+        //     uint256 candidate = myLastMove + 7;
+        //     if (myAttacks.isOfType(candidate, Attacks.UNTOUCHED)) {
+        //         return candidate;
+        //     }
+        // }
+        if (y < 8) {
+            uint256 candidate = myLastMove + 8;
+            if (myAttacks.isOfType(candidate, Attacks.UNTOUCHED)) {
+                return candidate;
+            }
+        }
+        // if (x < 8 && y < 8) {
+        //     uint256 candidate = myLastMove + 9;
+        //     if (myAttacks.isOfType(candidate, Attacks.UNTOUCHED)) {
+        //         return candidate;
+        //     }
+        // }
 
-            y += dy;
-            x += dx;
-            cellToFire = y * 8 + x;
-        } while (!myAttacks.isOfType(uint256(cellToFire), Attacks.UNTOUCHED));
-        return uint256(cellToFire);
+        // int256 cellToFire;
+        // do {
+        //     uint256 random = uint256(
+        //         keccak256(abi.encode(cellToFire, myLastMove, opponentsLastMove))
+        //     );
+        //     int256 dy = int256(random % 3);
+        //     int256 dx = int256((random >> 2) % 3);
+        //     if (y == 0) {
+        //         dy = dy % 2;
+        //     } else if (y == 7) {
+        //         dy = -(dy % 2);
+        //     } else {
+        //         dy -= 1;
+        //     }
+        //     if (x == 0) {
+        //         dx = dx % 2;
+        //     } else if (x == 7) {
+        //         dx = -(dx % 2);
+        //     } else {
+        //         dx -= 1;
+        //     }
+
+        //     y += dy;
+        //     x += dx;
+        //     cellToFire = y * 8 + x;
+        // } while (!myAttacks.isOfType(uint256(cellToFire), Attacks.UNTOUCHED));
+        // return uint256(cellToFire);
     }
 }
