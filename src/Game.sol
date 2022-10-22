@@ -485,44 +485,7 @@ contract Game {
             } // else draw
         }
 
-        // Distribute the proceeds
-        {
-            uint256 bidAmount = challenges[challengeHash].bidAmount;
-            uint256 amountToSplit = 2 * bidAmount;
-            uint256 facilitatorPercentage = challenges[challengeHash]
-                .facilitatorPercentage;
-
-            if (amountToSplit > 0) {
-                uint256 facilitatorFee = (amountToSplit *
-                    facilitatorPercentage) / PERCENTAGE_SCALE;
-                payable(facilitatorFeeAddress).transfer(facilitatorFee);
-
-                if (gs.winnerIdx == NO_WINNER) {
-                    amountToSplit = (amountToSplit - facilitatorFee) / 2;
-                    payable(gs.generals[0].owner()).transfer(amountToSplit);
-                    payable(gs.generals[1].owner()).transfer(amountToSplit);
-                } else {
-                    amountToSplit -= facilitatorFee;
-                    payable(gs.generals[gs.winnerIdx].owner()).transfer(
-                        amountToSplit
-                    );
-                }
-            }
-
-            emit BattleConcluded(
-                challengeHash,
-                address(gs.generals[0]),
-                address(gs.generals[1]),
-                gs.boards[0],
-                gs.boards[1],
-                bidAmount,
-                facilitatorPercentage,
-                gs.winnerIdx,
-                gs.outcome,
-                gs.gameHistory,
-                maxTurns
-            );
-        }
+        distributeFunds(challengeHash, gs, maxTurns, facilitatorFeeAddress);
 
         if (challengeHashes[challengeIdx] != challengeHash)
             revert InvalidChallengeIndex();
@@ -532,6 +495,49 @@ contract Game {
             challengeHashes.length - 1
         ];
         challengeHashes.pop();
+    }
+
+    function distributeFunds(
+        bytes32 challengeHash,
+        GameState memory gs,
+        uint256 maxTurns,
+        address facilitatorFeeAddress
+    ) private {
+        uint256 bidAmount = challenges[challengeHash].bidAmount;
+        uint256 amountToSplit = 2 * bidAmount;
+        uint256 facilitatorPercentage = challenges[challengeHash]
+            .facilitatorPercentage;
+
+        if (amountToSplit > 0) {
+            uint256 facilitatorFee = (amountToSplit * facilitatorPercentage) /
+                PERCENTAGE_SCALE;
+            payable(facilitatorFeeAddress).transfer(facilitatorFee);
+
+            if (gs.winnerIdx == NO_WINNER) {
+                amountToSplit = (amountToSplit - facilitatorFee) / 2;
+                payable(gs.generals[0].owner()).transfer(amountToSplit);
+                payable(gs.generals[1].owner()).transfer(amountToSplit);
+            } else {
+                amountToSplit -= facilitatorFee;
+                payable(gs.generals[gs.winnerIdx].owner()).transfer(
+                    amountToSplit
+                );
+            }
+        }
+
+        emit BattleConcluded(
+            challengeHash,
+            address(gs.generals[0]),
+            address(gs.generals[1]),
+            gs.boards[0],
+            gs.boards[1],
+            bidAmount,
+            facilitatorPercentage,
+            gs.winnerIdx,
+            gs.outcome,
+            gs.gameHistory,
+            maxTurns
+        );
     }
 
     function _getInitialGameState(bytes32 challengeHash, uint256 maxTurns)

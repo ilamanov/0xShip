@@ -178,6 +178,7 @@ contract GameTest is Test {
             FLEET2,
             SALT2,
             keccak256(abi.encodePacked(general1, _getFleetHash(FLEET1, SALT1))),
+            0,
             128,
             address(this)
         );
