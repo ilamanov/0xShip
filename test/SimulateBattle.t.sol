@@ -8,7 +8,6 @@ import "../src/generals/RandomGeneral.sol";
 import "../src/generals/SweeperGeneral.sol";
 import "../src/generals/HunterGeneral.sol";
 import "../src/generals/DFSGeneral.sol";
-import "../src/generals/TrackerGeneral.sol";
 import "../src/utils/Fleet.sol";
 
 contract SimulateBattle is Test {
@@ -28,7 +27,7 @@ contract SimulateBattle is Test {
         game = new Game();
 
         general1 = new SweeperGeneral(); // TODO choose your general. I like to keep this as SweeperGeneral because it makes it easier to trace the moves during debugging (since Sweeper just outputs consecuitve cells)
-        general2 = new TrackerGeneral(); // TODO choose your general
+        general2 = new DFSGeneral(); // TODO choose your general
 
         Game.Gear memory gear1 = Game.Gear(
             general1,

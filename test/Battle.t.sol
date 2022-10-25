@@ -8,7 +8,6 @@ import "../src/generals/RandomGeneral.sol";
 import "../src/generals/SweeperGeneral.sol";
 import "../src/generals/HunterGeneral.sol";
 import "../src/generals/DFSGeneral.sol";
-import "../src/generals/TrackerGeneral.sol";
 import "../src/utils/Fleet.sol";
 
 contract BattleTest is Test {
@@ -52,7 +51,7 @@ contract BattleTest is Test {
 
     function setUp() public {
         game = new Game();
-        general1 = new TrackerGeneral();
+        general1 = new DFSGeneral();
         general2 = new SweeperGeneral();
         _submitChallenge();
         _acceptChallenge();
