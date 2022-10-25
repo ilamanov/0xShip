@@ -4,6 +4,9 @@ On-chain Battleship Game
 - [Deployed Contract](https://goerli.etherscan.io/address/0x9648cDC5D3D17A7DEc035ac2d0d943b511ECf8F6)
 - Frontend: [0xship.vercel.app](https://0xship.vercel.app/)
 
+![Demo of the game UI](https://github.com/ilamanov/0xShip/blob/main/demo-image.png?raw=true)
+
+
 ### Here is how the game works at a high level:
  1. A challenger submits a Challenge py picking a general (the contract
     that has playing logic) and the fleet.
