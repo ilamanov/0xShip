@@ -22,3 +22,6 @@ On-chain Battleship Game
  providing only the hash of the fleet. This is so that opponents don't
  know each other's fleet before the battle begins).
 
+### How to play:
+
+[Directions](https://twitter.com/nazar_ilamanov/status/1585055440123359232)
