@@ -1,6 +1,7 @@
 # Compiler files
 cache/
 out/
+hardhat/
 
 # Ignores development broadcast logs
 !/broadcast
